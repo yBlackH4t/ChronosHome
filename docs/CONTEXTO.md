@@ -113,6 +113,13 @@ funcionando neste PC:
 existia, mas tinha menos de duas semanas. `flutter doctor` sem problemas: licenças Android aceitas
 e o A10s aparece como `SM A107M (android-arm)`.
 
+**Passo 1 (2026-10-11):** projeto criado com `flutter create` (só Android), pacote
+`com.yblackh4t.chronos_home`, nome "Chronos Home", Material 3 com tema claro e escuro (cor
+`#1E5E57`) e ícone próprio (casa com relógio: vetor adaptável + PNGs). `cupertino_icons` removido;
+`flutter_lints` fixo em 6.0.0. O Flutter 3.47.5 pede o NDK 28.2, que não está instalado; o
+`android/app/build.gradle.kts` aponta para o **NDK 30.0.16248370** que já existe no PC, e o build
+`armeabi-v7a` passa. APK de debug instalado no A10s.
+
 Cada passo: `flutter analyze`, `flutter test`, build e teste no A10s, depois commit e push numa
 branch.
 
