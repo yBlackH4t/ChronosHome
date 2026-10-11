@@ -129,6 +129,15 @@ banco drift em `lib/dados/` com uma tabela `leituras` provisória. Versões: `mo
 Depois de mudar `lib/dados/banco.dart`: `dart run build_runner build`. **Testado pelo dono no A10s:
 câmera, banco criptografado (sobrevive a fechar e abrir) e animação funcionando.**
 
+**Passo 3 (2026-10-11):** modelo da seção 5 em `lib/dados/tabelas.dart` (esquema **versão 2**) e
+regras em `lib/dados/banco.dart`: `cadastrarProduto`, `produtoPorCodigo`, `darEntrada`, `abrir`,
+`acabar`, `descartar`, `mover`, `unidadeParaAbrir` (a que vence primeiro; sem validade, a mais
+antiga) e `unidadeParaAcabar` (a aberta há mais tempo). Transição proibida lança
+`TransicaoInvalida` e nada fica pela metade (tudo em transação). Locais padrão: Despensa, Geladeira,
+Freezer. `foreign_keys` ligado. A migração 1 → 2 cria as tabelas novas e mantém a `leituras` do
+passo 2 (provisória, sai no passo 4). Testes em `test/banco_test.dart` (18 no total), incluindo a
+migração e a conferência do esquema com `validateDatabaseSchema`.
+
 Cada passo: `flutter analyze`, `flutter test`, build e teste no A10s, depois commit e push numa
 branch.
 
