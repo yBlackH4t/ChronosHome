@@ -108,6 +108,11 @@ funcionando neste PC:
 | 10 | **Segurança:** digital para abrir, backup e restauração | restaurar um backup em outro celular |
 | 11 | **Versão 1.0:** APK assinado, GitHub Release, Obtainium | instalado e atualizando pelo Obtainium |
 
+**Estado (2026-10-11):** passo 0 feito. Flutter **3.47.5** (stable, Dart 3.13.4) em
+`C:\src\flutter`, com `C:\src\flutter\bin` no PATH do usuário e analytics desligado. A 3.47.7
+existia, mas tinha menos de duas semanas. `flutter doctor` sem problemas: licenças Android aceitas
+e o A10s aparece como `SM A107M (android-arm)`.
+
 Cada passo: `flutter analyze`, `flutter test`, build e teste no A10s, depois commit e push numa
 branch.
 
