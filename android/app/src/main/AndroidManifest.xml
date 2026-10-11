@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Open Food Facts (e, no passo 9, o assistente). -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="Chronos Home"
         android:name="${applicationName}"

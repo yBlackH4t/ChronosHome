@@ -17,10 +17,21 @@ class TransicaoInvalida implements Exception {
   String toString() => mensagem;
 }
 
+/// Um produto e quantas unidades dele estão em casa.
+class ItemDoEstoque {
+  const ItemDoEstoque({required this.produto, required this.fechados, required this.abertos});
+
+  final Produto produto;
+  final int fechados;
+  final int abertos;
+
+  int get emCasa => fechados + abertos;
+}
+
 /// Locais criados junto com o banco.
 const locaisPadrao = ['Despensa', 'Geladeira', 'Freezer'];
 
-@DriftDatabase(tables: [Produtos, CodigosBarras, Locais, Unidades, Movimentos, Leituras])
+@DriftDatabase(tables: [Produtos, CodigosBarras, Locais, Unidades, Movimentos])
 class Banco extends _$Banco {
   /// [agora] existe para os testes controlarem o relógio.
   Banco(super.executor, {DateTime Function()? agora}) : _agora = agora ?? DateTime.now;
@@ -30,8 +41,9 @@ class Banco extends _$Banco {
 
   // Versão 1: passo 2 (só a tabela leituras).
   // Versão 2: passo 3 (produtos, códigos, locais, unidades, movimentos).
+  // Versão 3: passo 4 (sai a tabela leituras da prova).
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -47,6 +59,9 @@ class Banco extends _$Banco {
             await m.createTable(unidades);
             await m.createTable(movimentos);
             await _criarLocaisPadrao();
+          }
+          if (de < 3) {
+            await customStatement('DROP TABLE IF EXISTS leituras');
           }
         },
         beforeOpen: (detalhes) async {
@@ -256,31 +271,39 @@ class Banco extends _$Banco {
     ));
   }
 
-  // ---------------------------------------------------------------- prova do passo 2
-
-  Future<void> registrarLeitura(String codigo, String formato) {
-    return into(leituras).insert(
-      LeiturasCompanion.insert(
-        id: _uuid.v4(),
-        codigo: codigo,
-        formato: formato,
-        lidoEm: _agora(),
-      ),
-    );
+  /// Desfaz uma entrada feita por engano (bipou duas vezes): apaga a unidade e o histórico dela.
+  /// Só vale enquanto nada mais aconteceu com a unidade.
+  Future<void> desfazerEntrada(String unidadeId) {
+    return transaction(() async {
+      final unidade = await _unidade(unidadeId);
+      final acoes = (await historico(unidadeId)).map((m) => m.acao);
+      if (unidade.estado != EstadoUnidade.fechado || acoes.any((a) => a != AcaoMovimento.entrada)) {
+        throw const TransicaoInvalida('Esta unidade já foi usada; não dá mais para desfazer a entrada.');
+      }
+      await (delete(movimentos)..where((m) => m.unidadeId.equals(unidadeId))).go();
+      await (delete(unidades)..where((u) => u.id.equals(unidadeId))).go();
+    });
   }
 
-  /// As leituras mais recentes primeiro; a lista se atualiza sozinha.
-  Stream<List<Leitura>> observarUltimas({int limite = 20}) {
-    return (select(leituras)
-          ..orderBy([(l) => OrderingTerm.desc(l.lidoEm)])
-          ..limit(limite))
-        .watch();
-  }
-
-  Future<int> contarLeituras() async {
-    final total = leituras.id.count();
-    final linha = await (selectOnly(leituras)..addColumns([total])).getSingle();
-    return linha.read(total) ?? 0;
+  /// Todos os produtos com quantas unidades há em casa; a lista se atualiza sozinha.
+  Stream<List<ItemDoEstoque>> observarEstoque() {
+    return customSelect(
+      'SELECT p.*, '
+      "COALESCE(SUM(u.estado = 'fechado'), 0) AS fechados, "
+      "COALESCE(SUM(u.estado = 'aberto'), 0) AS abertos "
+      'FROM produtos p '
+      "LEFT JOIN unidades u ON u.produto_id = p.id AND u.estado IN ('fechado', 'aberto') "
+      'GROUP BY p.id '
+      'ORDER BY p.nome COLLATE NOCASE',
+      readsFrom: {produtos, unidades},
+    ).watch().map((linhas) => [
+          for (final linha in linhas)
+            ItemDoEstoque(
+              produto: produtos.map(linha.data),
+              fechados: linha.read<int>('fechados'),
+              abertos: linha.read<int>('abertos'),
+            ),
+        ]);
   }
 
   /// Versão do SQLCipher; vazia quando o banco é um SQLite comum (sem criptografia).

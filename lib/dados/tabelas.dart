@@ -72,14 +72,3 @@ class Movimentos extends Table {
   @override
   Set<Column> get primaryKey => {id};
 }
-
-/// Tabela da prova do passo 2 (códigos lidos pela câmera). Sai quando a tela Compras chegar.
-class Leituras extends Table {
-  TextColumn get id => text()();
-  TextColumn get codigo => text()();
-  TextColumn get formato => text()();
-  DateTimeColumn get lidoEm => dateTime()();
-
-  @override
-  Set<Column> get primaryKey => {id};
-}
