@@ -148,7 +148,7 @@ houver, marca, categoria mais específica e foto) e deixa conferir, escolher a q
 sem internet, avisa e deixa preencher à mão. A **tela inicial** agora lista o estoque
 (`observarEstoque`) com o botão Compras. Banco **versão 3**: sai a tabela `leituras` e as telas de
 prova do passo 2. Permissão `INTERNET` no manifesto principal. 28 testes (com o Open Food Facts
-simulado).
+simulado). **Testado pelo dono no A10s: funcionando.**
 
 Cada passo: `flutter analyze`, `flutter test`, build e teste no A10s, depois commit e push numa
 branch.
