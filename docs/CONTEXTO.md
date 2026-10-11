@@ -46,7 +46,7 @@ O uso típico:
 | Estado | `flutter_riverpod` | estado das telas, testável |
 | Navegação | `go_router` | abas e telas |
 | Banco | `drift` (SQLite com tipos e migrações) | dados no celular |
-| Criptografia do banco | `sqlcipher_flutter_libs` (SQLCipher) | banco ilegível fora do app |
+| Criptografia do banco | `sqlite3` 3.x com `hooks: user_defines: sqlite3: source: sqlcipher` no `pubspec.yaml` (o `sqlcipher_flutter_libs` foi descontinuado) | banco ilegível fora do app |
 | Chaves | `flutter_secure_storage` (Android Keystore) | chave do banco e a do Groq |
 | Desbloqueio | `local_auth` (digital) | abrir o app com a digital |
 | Código de barras | `mobile_scanner` | câmera lendo EAN-13, EAN-8, UPC, QR |
@@ -119,6 +119,14 @@ e o A10s aparece como `SM A107M (android-arm)`.
 `flutter_lints` fixo em 6.0.0. O Flutter 3.47.5 pede o NDK 28.2, que não está instalado; o
 `android/app/build.gradle.kts` aponta para o **NDK 30.0.16248370** que já existe no PC, e o build
 `armeabi-v7a` passa. APK de debug instalado no A10s.
+
+**Passo 2 (2026-10-11):** telas de prova (Bipar, Banco criptografado, Animação) em `lib/telas/`,
+banco drift em `lib/dados/` com uma tabela `leituras` provisória. Versões: `mobile_scanner` 7.4.2,
+`drift`/`drift_dev` 2.35.0, `sqlite3` 3.6.0 (SQLCipher), `flutter_secure_storage` 11.2.0,
+`build_runner` 2.16.1, `uuid` 4.6.0. O `analyzer` está fixo em 14.4.0 porque o 14.5.0 quebra o
+`drift_dev` 2.35.0. A chave do banco (32 bytes aleatórios) fica no Keystore; o arquivo é
+`chronos_home.db` na pasta de documentos do app. O APK leva `lib/armeabi-v7a/libsqlcipher.so`.
+Depois de mudar `lib/dados/banco.dart`: `dart run build_runner build`.
 
 Cada passo: `flutter analyze`, `flutter test`, build e teste no A10s, depois commit e push numa
 branch.
