@@ -24,8 +24,8 @@ Feito em **Flutter** (Android primeiro). Produto separado do
 | 1 | App criado: nome, tema claro/escuro e ícone | ✅ |
 | 2 | Prova no A10s: câmera, banco criptografado, animação | ✅ testado no celular |
 | 3 | Modelo de dados com regras de estado e migração | ✅ |
-| 4 | Compras: bipar → entrada; produto novo pelo Open Food Facts | ⏳ |
-| 5 | Cozinha: bipar → Abrir ou Acabou | |
+| 4 | Compras: bipar → entrada; produto novo pelo Open Food Facts | ✅ |
+| 5 | Cozinha: bipar → Abrir ou Acabou | ⏳ |
 | 6 | Início: abertos há N dias, acabando, lista de compras | |
 | 7 | Avisos e validade | |
 | 8 | Gráficos | |
