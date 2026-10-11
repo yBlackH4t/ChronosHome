@@ -1,0 +1,35 @@
+# Verificação automática: roda em todo PR e em todo push na main.
+# Gratuito no GitHub para repositórios públicos.
+name: Verificação
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  analisar-e-testar:
+    name: analyze e test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6.1.0
+
+      - uses: subosito/flutter-action@v2.23.0
+        with:
+          flutter-version: 3.47.5
+          channel: stable
+          cache: true
+
+      - name: Baixar bibliotecas
+        run: flutter pub get
+
+      - name: Conferir se o código gerado do drift está em dia
+        run: |
+          dart run build_runner build --delete-conflicting-outputs
+          git diff --exit-code -- lib/
+
+      - name: Analisar
+        run: flutter analyze
+
+      - name: Testar
+        run: flutter test
