@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../dados/banco.dart';
 import '../servicos/open_food_facts.dart';
+import '../componentes/acoes_do_produto.dart';
 import 'compras.dart';
+import 'cozinha.dart';
 
-/// Tela inicial: o que tem em casa e o botão de Compras.
+/// Tela inicial: o que tem em casa e os botões Compras e Cozinha.
 /// Os avisos e a lista de compras entram no passo 6.
 class TelaInicial extends StatelessWidget {
   const TelaInicial({super.key, required this.banco, required this.openFoodFacts});
@@ -31,12 +33,33 @@ class TelaInicial extends StatelessWidget {
         }
         return _Esqueleto(
           corpo: _ListaDoEstoque(banco: banco),
-          botao: FloatingActionButton.extended(
-            icon: const Icon(Icons.shopping_cart_rounded),
-            label: const Text('Compras'),
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-              builder: (_) => TelaCompras(banco: banco, openFoodFacts: openFoodFacts),
-            )),
+          botoes: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: FilledButton.tonalIcon(
+                      icon: const Icon(Icons.shopping_cart_rounded),
+                      label: const Text('Compras'),
+                      onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => TelaCompras(banco: banco, openFoodFacts: openFoodFacts),
+                      )),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton.icon(
+                      icon: const Icon(Icons.kitchen_rounded),
+                      label: const Text('Cozinha'),
+                      onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) => TelaCozinha(banco: banco),
+                      )),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         );
       },
@@ -45,17 +68,17 @@ class TelaInicial extends StatelessWidget {
 }
 
 class _Esqueleto extends StatelessWidget {
-  const _Esqueleto({required this.corpo, this.botao});
+  const _Esqueleto({required this.corpo, this.botoes});
 
   final Widget corpo;
-  final Widget? botao;
+  final Widget? botoes;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Chronos Home')),
       body: corpo,
-      floatingActionButton: botao,
+      bottomNavigationBar: botoes,
     );
   }
 }
@@ -79,11 +102,9 @@ class _ListaDoEstoque extends StatelessWidget {
           );
         }
         return ListView.separated(
-          // Espaço no fim para o botão não cobrir o último item.
-          padding: const EdgeInsets.only(bottom: 88),
           itemCount: itens.length,
           separatorBuilder: (_, _) => const Divider(height: 1),
-          itemBuilder: (context, i) => _LinhaDoEstoque(item: itens[i]),
+          itemBuilder: (context, i) => _LinhaDoEstoque(banco: banco, item: itens[i]),
         );
       },
     );
@@ -91,8 +112,9 @@ class _ListaDoEstoque extends StatelessWidget {
 }
 
 class _LinhaDoEstoque extends StatelessWidget {
-  const _LinhaDoEstoque({required this.item});
+  const _LinhaDoEstoque({required this.banco, required this.item});
 
+  final Banco banco;
   final ItemDoEstoque item;
 
   @override
@@ -111,6 +133,7 @@ class _LinhaDoEstoque extends StatelessWidget {
         foregroundColor: item.emCasa == 0 ? cores.onErrorContainer : cores.onPrimaryContainer,
         child: Text('${item.emCasa}'),
       ),
+      onTap: () => mostrarAcoesDoProduto(context, banco, p),
     );
   }
 }
