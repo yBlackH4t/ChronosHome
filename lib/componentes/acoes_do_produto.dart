@@ -3,7 +3,8 @@ import 'package:flutter/services.dart';
 
 import '../dados/banco.dart';
 
-/// Painel com Abrir, Acabou e Descartar para um produto.
+/// Painel com Abrir, Acabou e Descartar para um produto, e os ajustes de estoque mínimo e
+/// de prazo depois de aberto.
 /// Usado na Cozinha (depois de bipar) e no Início (tocando no produto).
 ///
 /// Depois da ação mostra um aviso com "Desfazer", para corrigir um toque errado.
@@ -12,6 +13,8 @@ Future<void> mostrarAcoesDoProduto(BuildContext context, Banco banco, Produto pr
   final feito = await showModalBottomSheet<_AcaoFeita>(
     context: context,
     showDragHandle: true,
+    // O painel cresce com os ajustes; no A10s pode passar da metade da tela.
+    isScrollControlled: true,
     builder: (_) => _PainelDeAcoes(banco: banco, produto: produto),
   );
   if (feito == null) return;
@@ -47,11 +50,13 @@ class _PainelDeAcoes extends StatefulWidget {
 
 class _PainelDeAcoesState extends State<_PainelDeAcoes> {
   late final Future<_Situacao> _situacao = _carregar();
+
   bool _ocupado = false;
 
   Future<_Situacao> _carregar() async {
     final id = widget.produto.id;
     return _Situacao(
+      produto: await widget.banco.produtoPorId(id),
       emCasa: await widget.banco.unidadesEmCasa(id),
       paraAbrir: await widget.banco.unidadeParaAbrir(id),
       paraAcabar: await widget.banco.unidadeParaAcabar(id),
@@ -75,7 +80,7 @@ class _PainelDeAcoesState extends State<_PainelDeAcoes> {
   Widget build(BuildContext context) {
     final textos = Theme.of(context).textTheme;
     return SafeArea(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
         child: FutureBuilder<_Situacao>(
           future: _situacao,
@@ -123,6 +128,8 @@ class _PainelDeAcoesState extends State<_PainelDeAcoes> {
                         : () => _fazer(s.paraAcabar!.id, widget.banco.descartar, 'descartado'),
                   ),
                 ],
+                const Divider(height: 32),
+                _Ajustes(banco: widget.banco, produto: s.produto),
               ],
             );
           },
@@ -150,8 +157,14 @@ class _PainelDeAcoesState extends State<_PainelDeAcoes> {
 }
 
 class _Situacao {
-  const _Situacao({required this.emCasa, required this.paraAbrir, required this.paraAcabar});
+  const _Situacao({
+    required this.produto,
+    required this.emCasa,
+    required this.paraAbrir,
+    required this.paraAcabar,
+  });
 
+  final Produto produto;
   final List<Unidade> emCasa;
   final Unidade? paraAbrir;
   final Unidade? paraAcabar;
@@ -173,6 +186,101 @@ class _Botao extends StatelessWidget {
       child: principal
           ? FilledButton.icon(style: estilo, icon: Icon(icone), label: Text(texto), onPressed: aoTocar)
           : OutlinedButton.icon(style: estilo, icon: Icon(icone), label: Text(texto), onPressed: aoTocar),
+    );
+  }
+}
+
+/// Estoque mínimo (lista de compras) e prazo depois de aberto (avisos), salvos a cada toque.
+class _Ajustes extends StatefulWidget {
+  const _Ajustes({required this.banco, required this.produto});
+
+  final Banco banco;
+  final Produto produto;
+
+  @override
+  State<_Ajustes> createState() => _AjustesState();
+}
+
+class _AjustesState extends State<_Ajustes> {
+  late int _minimo = widget.produto.estoqueMinimo;
+  late int? _dias = widget.produto.diasValidadeAberto;
+
+  Future<void> _salvar({required int minimo, required int? dias}) async {
+    setState(() {
+      _minimo = minimo;
+      _dias = dias;
+    });
+    await widget.banco.ajustarProduto(widget.produto.id, estoqueMinimo: minimo, diasValidadeAberto: dias);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final dias = _dias;
+    return Column(
+      children: [
+        _Contador(
+          titulo: 'Estoque mínimo',
+          detalhe: _minimo == 0 ? 'fora da lista de compras' : 'abaixo disso vai para a lista',
+          valor: '$_minimo',
+          menos: _minimo > 0 ? () => _salvar(minimo: _minimo - 1, dias: dias) : null,
+          mais: () => _salvar(minimo: _minimo + 1, dias: dias),
+        ),
+        _Contador(
+          titulo: 'Dura depois de aberto',
+          detalhe: dias == null ? 'sem aviso' : 'avisa quando estiver acabando o prazo',
+          valor: dias == null ? '—' : '$dias d',
+          // Diminuir de 1 dia tira o aviso.
+          menos: dias == null ? null : () => _salvar(minimo: _minimo, dias: dias > 1 ? dias - 1 : null),
+          mais: () => _salvar(minimo: _minimo, dias: (dias ?? 0) + 1),
+        ),
+      ],
+    );
+  }
+}
+
+class _Contador extends StatelessWidget {
+  const _Contador({
+    required this.titulo,
+    required this.detalhe,
+    required this.valor,
+    required this.menos,
+    required this.mais,
+  });
+
+  final String titulo;
+  final String detalhe;
+  final String valor;
+  final VoidCallback? menos;
+  final VoidCallback mais;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(titulo),
+              Text(detalhe, style: Theme.of(context).textTheme.bodySmall),
+            ],
+          ),
+        ),
+        IconButton(
+          tooltip: '$titulo: menos',
+          icon: const Icon(Icons.remove_circle_outline_rounded),
+          onPressed: menos,
+        ),
+        SizedBox(
+          width: 40,
+          child: Text(valor, textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleMedium),
+        ),
+        IconButton(
+          tooltip: '$titulo: mais',
+          icon: const Icon(Icons.add_circle_outline_rounded),
+          onPressed: mais,
+        ),
+      ],
     );
   }
 }

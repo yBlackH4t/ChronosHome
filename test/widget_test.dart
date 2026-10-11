@@ -49,6 +49,56 @@ void main() {
     await encerrar(tester);
   });
 
+  testWidgets('Agora mostra o aberto; Comprar mostra a lista com o número na aba', (tester) async {
+    await tester.runAsync(() async {
+      final maionese = await banco.cadastrarProduto(nome: 'Maionese', diasValidadeAberto: 5);
+      final [u] = await banco.darEntrada(maionese);
+      await banco.abrir(u);
+      final arroz = await banco.cadastrarProduto(nome: 'Arroz', estoqueMinimo: 2);
+      await banco.darEntrada(arroz);
+    });
+
+    await tester.pumpWidget(ChronosHomeApp(banco: Future.value(banco), openFoodFacts: semInternet()));
+    await esperar(tester);
+
+    expect(find.text('Abertos'), findsOneWidget);
+    expect(find.text('Aberto hoje · ainda 5 dias'), findsOneWidget);
+    expect(find.textContaining('Acabando'), findsOneWidget);
+
+    await tester.tap(find.text('Comprar'));
+    await esperar(tester);
+    expect(find.text('Arroz'), findsOneWidget);
+    expect(find.text('Tem 1 · mínimo 2'), findsOneWidget);
+    expect(find.text('Copiar a lista'), findsOneWidget);
+    await encerrar(tester);
+  });
+
+  testWidgets('no painel, o + do estoque mínimo põe o produto na lista de compras', (tester) async {
+    await tester.runAsync(() async {
+      final id = await banco.cadastrarProduto(nome: 'Café');
+      await banco.darEntrada(id);
+    });
+
+    await tester.pumpWidget(ChronosHomeApp(banco: Future.value(banco), openFoodFacts: semInternet()));
+    await esperar(tester);
+    await tester.tap(find.text('Estoque'));
+    await esperar(tester);
+    await tester.tap(find.text('Café'));
+    await esperar(tester);
+
+    await tester.tap(find.byTooltip('Estoque mínimo: mais'));
+    await esperar(tester);
+    await tester.tap(find.byTooltip('Estoque mínimo: mais'));
+    await esperar(tester);
+    await tester.tapAt(const Offset(10, 10)); // fecha o painel
+    await esperar(tester);
+
+    await tester.tap(find.text('Comprar'));
+    await esperar(tester);
+    expect(find.text('Tem 1 · mínimo 2'), findsOneWidget);
+    await encerrar(tester);
+  });
+
   testWidgets('tocar no produto abre o painel; Abrir e depois Desfazer', (tester) async {
     late String id;
     await tester.runAsync(() async {
@@ -57,6 +107,8 @@ void main() {
     });
 
     await tester.pumpWidget(ChronosHomeApp(banco: Future.value(banco), openFoodFacts: semInternet()));
+    await esperar(tester);
+    await tester.tap(find.text('Estoque'));
     await esperar(tester);
     await tester.tap(find.text('Extrato de tomate'));
     await esperar(tester);
@@ -96,6 +148,8 @@ void main() {
     });
 
     await tester.pumpWidget(ChronosHomeApp(banco: Future.value(banco), openFoodFacts: semInternet()));
+    await esperar(tester);
+    await tester.tap(find.text('Estoque'));
     await esperar(tester);
 
     expect(find.text('Maionese'), findsOneWidget);

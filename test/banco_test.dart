@@ -248,6 +248,31 @@ void main() {
     });
   });
 
+  test('ajustar produto muda o mínimo e o prazo e recusa números inválidos', () async {
+    final id = await maionese();
+
+    await banco.ajustarProduto(id, estoqueMinimo: 2, diasValidadeAberto: null);
+    final p = await banco.produtoPorId(id);
+    expect(p.estoqueMinimo, 2);
+    expect(p.diasValidadeAberto, isNull);
+
+    expect(() => banco.ajustarProduto(id, estoqueMinimo: -1), throwsA(isA<TransicaoInvalida>()));
+    expect(() => banco.ajustarProduto(id, estoqueMinimo: 0, diasValidadeAberto: 0),
+        throwsA(isA<TransicaoInvalida>()));
+  });
+
+  test('o estoque informa desde quando está aberta a unidade mais antiga', () async {
+    final id = await maionese();
+    final [a, b] = await banco.darEntrada(id, quantidade: 2);
+    passar(const Duration(days: 1));
+    await banco.abrir(a);
+    passar(const Duration(days: 2));
+    await banco.abrir(b);
+
+    final [item] = await banco.observarEstoque().first;
+    expect(item.abertoDesde, DateTime(2026, 10, 12, 9));
+  });
+
   test('o estoque conta fechados e abertos e ignora o que saiu', () async {
     final id = await maionese();
     await banco.cadastrarProduto(nome: 'Arroz');
