@@ -150,6 +150,14 @@ sem internet, avisa e deixa preencher à mão. A **tela inicial** agora lista o 
 prova do passo 2. Permissão `INTERNET` no manifesto principal. 28 testes (com o Open Food Facts
 simulado). **Testado pelo dono no A10s: funcionando.**
 
+**Passo 5 (2026-10-11):** tela **Cozinha** (`lib/telas/cozinha.dart`): bipou → abre o painel de
+ações do produto (`lib/componentes/acoes_do_produto.dart`) com **Abrir**, **Acabou** e
+**Descartar**. O botão em destaque é a sugestão: **Acabou** se já há um aberto, senão **Abrir**.
+O painel mostra quantos fechados e abertos há e há quantos dias o mais antigo está aberto. Depois
+do toque aparece um aviso com **Desfazer** (`desfazerUltimaAcao` no banco: volta o estado e apaga
+a linha do histórico). Código não cadastrado manda usar Compras. O mesmo painel abre tocando no
+produto no Início, que agora tem os botões Compras e Cozinha embaixo. 33 testes.
+
 Cada passo: `flutter analyze`, `flutter test`, build e teste no A10s, depois commit e push numa
 branch.
 
