@@ -23,6 +23,8 @@ dependencies:
   path_provider: 2.1.6
   path: 1.9.1
   uuid: 4.6.0
+  # Consulta ao Open Food Facts (nome, marca e foto pelo código de barras).
+  http: 1.6.0
 
 dev_dependencies:
   flutter_test:

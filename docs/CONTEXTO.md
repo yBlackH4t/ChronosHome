@@ -138,6 +138,18 @@ Freezer. `foreign_keys` ligado. A migração 1 → 2 cria as tabelas novas e man
 passo 2 (provisória, sai no passo 4). Testes em `test/banco_test.dart` (18 no total), incluindo a
 migração e a conferência do esquema com `validateDatabaseSchema`.
 
+**Passo 4 (2026-10-11):** tela **Compras** (`lib/telas/compras.dart`): a câmera lê EAN/UPC;
+produto conhecido entra direto como unidade fechada no local escolhido (Despensa por padrão); o
+mesmo código só conta de novo depois de 2 segundos; botões + e − na lista "nesta compra" (o −
+usa `desfazerEntrada`, que só vale para unidade ainda não usada). Código desconhecido abre
+**Produto novo** (`lib/telas/produto_novo.dart`), que busca no **Open Food Facts**
+(`lib/servicos/open_food_facts.dart`, pacote `http` 1.6.0, sem chave; nome em português quando
+houver, marca, categoria mais específica e foto) e deixa conferir, escolher a quantidade e salvar;
+sem internet, avisa e deixa preencher à mão. A **tela inicial** agora lista o estoque
+(`observarEstoque`) com o botão Compras. Banco **versão 3**: sai a tabela `leituras` e as telas de
+prova do passo 2. Permissão `INTERNET` no manifesto principal. 28 testes (com o Open Food Facts
+simulado). **Testado pelo dono no A10s: funcionando.**
+
 Cada passo: `flutter analyze`, `flutter test`, build e teste no A10s, depois commit e push numa
 branch.
 

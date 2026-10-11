@@ -7,30 +7,53 @@ Como o Chronos Home está organizado por dentro. As decisões e o porquê de cad
 
 ```
 lib/
-  main.dart              início do app: tema, cores e abertura do banco
+  main.dart              início do app: tema, cores, banco e Open Food Facts
   dados/
     tabelas.dart         as tabelas do banco (drift) e os enums de estado
     banco.dart           o banco e as regras (entrada, abrir, acabou, descartar, mover)
     banco.g.dart         código gerado pelo drift: não editar à mão
     abrir_banco.dart     abre o arquivo com SQLCipher e cuida da chave no Keystore
+  servicos/
+    open_food_facts.dart nome, marca, categoria e foto pelo código de barras
   telas/
-    inicio.dart          tela inicial
-    bipar.dart           câmera lendo códigos (mobile_scanner)
-    prova_banco.dart     confere o SQLCipher (prova do passo 2)
-    animacao.dart        lista animada (prova do passo 2)
+    inicio.dart          o estoque (o que tem em casa) e o botão Compras
+    compras.dart         bipar o que chegou do mercado
+    produto_novo.dart    cadastro de um código que o app não conhece
+  componentes/
+    erro_da_camera.dart  mensagem legível quando a câmera não abre
 test/
-  banco_test.dart        regras de estado e migração do banco
-  widget_test.dart       tela inicial e SQLCipher
-android/                 projeto Android (ícone, nome, NDK)
+  banco_test.dart        regras de estado, estoque e migrações do banco
+  open_food_facts_test.dart  leitura das respostas do Open Food Facts (simuladas)
+  widget_test.dart       telas Início e Produto novo, e o SQLCipher
+android/                 projeto Android (ícone, nome, NDK, permissões)
 docs/                    documentação
 ```
 
-Regra geral: **`dados/` não conhece telas**, e as telas falam com o banco só pelos métodos de
-`Banco`. Assim as regras são testadas sem celular.
+Regras gerais:
+- **`dados/` e `servicos/` não conhecem telas**; as telas falam com o banco só pelos métodos de
+  `Banco`. Assim as regras são testadas sem celular.
+- Serviços de internet recebem o cliente HTTP no construtor, para os testes simularem as respostas
+  sem rede.
+
+## Fluxo de Compras
+
+```mermaid
+flowchart TD
+    A[Câmera lê o código] --> B{Produto conhecido?}
+    B -- sim --> C[darEntrada: 1 unidade fechada no local escolhido]
+    B -- não --> D[Produto novo: busca no Open Food Facts]
+    D --> E{Achou?}
+    E -- sim --> F[Campos preenchidos para conferir]
+    E -- não ou sem internet --> G[Preencher à mão]
+    F --> H[Salvar: cadastrarProduto + darEntrada]
+    G --> H
+    C --> I[Lista desta compra, com + e −]
+    H --> I
+```
 
 ## Banco de dados
 
-SQLite pelo [drift](https://drift.simonbinder.eu/), com SQLCipher. Esquema atual: **versão 2**.
+SQLite pelo [drift](https://drift.simonbinder.eu/), com SQLCipher. Esquema atual: **versão 3**.
 
 ```mermaid
 erDiagram
@@ -79,7 +102,6 @@ erDiagram
 - Cada **unidade física** (um pote, uma lata) é uma linha em `unidades`. A quantidade em casa é a
   contagem das unidades fechadas ou abertas.
 - Os ids são **UUID**, para um dia sincronizar mais de um celular sem conflito.
-- A tabela `leituras` é provisória (prova do passo 2) e sai no passo 4.
 
 ## Regras de estado
 
@@ -115,6 +137,7 @@ stateDiagram-v2
 |---|---|---|
 | 1 | 2 | tabela `leituras` (prova da câmera) |
 | 2 | 3 | `produtos`, `codigos_barras`, `locais`, `unidades`, `movimentos` e locais padrão |
+| 3 | 4 | sai a tabela `leituras` |
 
 ## Criptografia
 

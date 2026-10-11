@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:drift/drift.dart' show driftRuntimeOptions;
+import 'package:path/path.dart' as p;
 import 'package:drift/native.dart';
 import 'package:drift_dev/api/migrations_native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -178,18 +181,78 @@ void main() {
     });
   });
 
-  test('migração: o banco do passo 2 (versão 1) ganha as tabelas novas e mantém as leituras', () async {
-    final antigo = Banco(NativeDatabase.memory(setup: (db) {
-      // O mesmo SQL que o drift gerou na versão 1.
-      db.execute('CREATE TABLE IF NOT EXISTS "leituras" ("id" TEXT NOT NULL, "codigo" TEXT NOT NULL, '
-          '"formato" TEXT NOT NULL, "lido_em" INTEGER NOT NULL, PRIMARY KEY ("id"))');
-      db.execute("INSERT INTO leituras VALUES ('l1', '7891234567895', 'ean13', 0)");
-      db.execute('PRAGMA user_version = 1');
-    }));
-    addTearDown(antigo.close);
+  group('desfazer entrada', () {
+    test('apaga a unidade e o histórico dela', () async {
+      final id = await maionese();
+      final [a, _] = await banco.darEntrada(id, quantidade: 2);
 
-    expect(await antigo.contarLeituras(), 1);
-    expect((await antigo.listarLocais()).map((l) => l.nome), containsAll(locaisPadrao));
-    await antigo.validateDatabaseSchema();
+      await banco.desfazerEntrada(a);
+
+      expect(await banco.quantidadeEmCasa(id), 1);
+      expect(await banco.historico(a), isEmpty);
+    });
+
+    test('não desfaz uma unidade que já foi usada', () async {
+      final id = await maionese();
+      final [a] = await banco.darEntrada(id);
+      await banco.abrir(a);
+
+      expect(() => banco.desfazerEntrada(a), throwsA(isA<TransicaoInvalida>()));
+    });
+  });
+
+  test('o estoque conta fechados e abertos e ignora o que saiu', () async {
+    final id = await maionese();
+    await banco.cadastrarProduto(nome: 'Arroz');
+    final [a, b, _] = await banco.darEntrada(id, quantidade: 3);
+    await banco.abrir(a);
+    await banco.acabar(b);
+
+    final estoque = await banco.observarEstoque().first;
+
+    expect(estoque.map((i) => i.produto.nome), ['Arroz', 'Maionese']);
+    final maioneseNoEstoque = estoque.last;
+    expect(maioneseNoEstoque.fechados, 1);
+    expect(maioneseNoEstoque.abertos, 1);
+    expect(maioneseNoEstoque.emCasa, 2);
+    expect(estoque.first.emCasa, 0);
+  });
+
+  group('migrações', () {
+    test('versão 1 (passo 2) → atual: cria as tabelas e tira a de leituras', () async {
+      final antigo = Banco(NativeDatabase.memory(setup: (db) {
+        // O mesmo SQL que o drift gerou na versão 1.
+        db.execute('CREATE TABLE IF NOT EXISTS "leituras" ("id" TEXT NOT NULL, "codigo" TEXT NOT NULL, '
+            '"formato" TEXT NOT NULL, "lido_em" INTEGER NOT NULL, PRIMARY KEY ("id"))');
+        db.execute("INSERT INTO leituras VALUES ('l1', '7891234567895', 'ean13', 0)");
+        db.execute('PRAGMA user_version = 1');
+      }));
+      addTearDown(antigo.close);
+
+      expect((await antigo.listarLocais()).map((l) => l.nome), containsAll(locaisPadrao));
+      await antigo.validateDatabaseSchema();
+    });
+
+    test('versão 2 (passo 3) → atual: mantém produtos e estoque', () async {
+      final pasta = await Directory.systemTemp.createTemp('chronos_home_');
+      addTearDown(() => pasta.delete(recursive: true));
+      final arquivo = File(p.join(pasta.path, 'v2.db'));
+
+      // Monta um banco versão 2: o esquema atual mais a tabela leituras.
+      final v2 = Banco(NativeDatabase(arquivo));
+      final id = await v2.cadastrarProduto(nome: 'Café', codigos: ['789']);
+      await v2.darEntrada(id, quantidade: 2);
+      await v2.customStatement('CREATE TABLE leituras (id TEXT NOT NULL, codigo TEXT NOT NULL, '
+          'formato TEXT NOT NULL, lido_em INTEGER NOT NULL, PRIMARY KEY (id))');
+      await v2.customStatement('PRAGMA user_version = 2');
+      await v2.close();
+
+      final atual = Banco(NativeDatabase(arquivo));
+      addTearDown(atual.close);
+
+      expect((await atual.produtoPorCodigo('789'))?.nome, 'Café');
+      expect(await atual.quantidadeEmCasa(id), 2);
+      await atual.validateDatabaseSchema();
+    });
   });
 }
