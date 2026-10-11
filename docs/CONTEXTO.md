@@ -156,7 +156,8 @@ ações do produto (`lib/componentes/acoes_do_produto.dart`) com **Abrir**, **Ac
 O painel mostra quantos fechados e abertos há e há quantos dias o mais antigo está aberto. Depois
 do toque aparece um aviso com **Desfazer** (`desfazerUltimaAcao` no banco: volta o estado e apaga
 a linha do histórico). Código não cadastrado manda usar Compras. O mesmo painel abre tocando no
-produto no Início, que agora tem os botões Compras e Cozinha embaixo. 33 testes.
+produto no Início, que agora tem os botões Compras e Cozinha embaixo. 33 testes. **Testado pelo
+dono no A10s: funcionando.**
 
 Cada passo: `flutter analyze`, `flutter test`, build e teste no A10s, depois commit e push numa
 branch.
