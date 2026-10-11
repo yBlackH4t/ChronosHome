@@ -12,20 +12,22 @@ lib/
     tabelas.dart         as tabelas do banco (drift) e os enums de estado
     banco.dart           o banco e as regras (entrada, abrir, acabou, descartar, mover)
     banco.g.dart         código gerado pelo drift: não editar à mão
+    resumo.dart          contas do Início: abertos e prazos, acabando, lista de compras
     abrir_banco.dart     abre o arquivo com SQLCipher e cuida da chave no Keystore
   servicos/
     open_food_facts.dart nome, marca, categoria e foto pelo código de barras
   telas/
-    inicio.dart          o estoque (o que tem em casa) e os botões Compras e Cozinha
+    inicio.dart          abas Agora, Comprar e Estoque, e os botões Compras e Cozinha
     compras.dart         bipar o que chegou do mercado
     cozinha.dart         bipar o que abriu, acabou ou foi descartado
     produto_novo.dart    cadastro de um código que o app não conhece
   componentes/
     erro_da_camera.dart  mensagem legível quando a câmera não abre
-    acoes_do_produto.dart painel com Abrir, Acabou, Descartar e o aviso com Desfazer
+    acoes_do_produto.dart painel com Abrir, Acabou, Descartar, Desfazer e os ajustes do produto
 test/
   banco_test.dart        regras de estado, estoque e migrações do banco
   open_food_facts_test.dart  leitura das respostas do Open Food Facts (simuladas)
+  resumo_test.dart       prazos, ordem dos abertos, acabando e lista de compras
   widget_test.dart       telas Início e Produto novo, e o SQLCipher
 android/                 projeto Android (ícone, nome, NDK, permissões)
 docs/                    documentação
@@ -128,6 +130,18 @@ stateDiagram-v2
 - **Ao bipar para abrir**, o app escolhe a unidade fechada que vence primeiro; sem validade, a
   mais antiga.
 - **Ao bipar para acabar**, escolhe a unidade aberta há mais tempo; se não houver, a próxima a abrir.
+
+## Contas do Início
+
+`lib/dados/resumo.dart` recebe a lista do estoque e a data de hoje e devolve:
+
+| Lista | Regra |
+|---|---|
+| Abertos | produtos com unidade aberta; ordem: passou do prazo, acabando (hoje ou amanhã é o último dia), depois o aberto há mais tempo |
+| Acabando | tem aberto e nenhum fechado, e ainda não está na lista de compras |
+| Lista de compras | em casa abaixo do `estoque_minimo`; quantidade = mínimo − em casa |
+
+"Aberto há N dias" conta dias de calendário: aberto ontem às 23h já conta 1 dia hoje cedo.
 
 ## Migrações
 
