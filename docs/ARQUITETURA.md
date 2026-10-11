@@ -16,11 +16,13 @@ lib/
   servicos/
     open_food_facts.dart nome, marca, categoria e foto pelo código de barras
   telas/
-    inicio.dart          o estoque (o que tem em casa) e o botão Compras
+    inicio.dart          o estoque (o que tem em casa) e os botões Compras e Cozinha
     compras.dart         bipar o que chegou do mercado
+    cozinha.dart         bipar o que abriu, acabou ou foi descartado
     produto_novo.dart    cadastro de um código que o app não conhece
   componentes/
     erro_da_camera.dart  mensagem legível quando a câmera não abre
+    acoes_do_produto.dart painel com Abrir, Acabou, Descartar e o aviso com Desfazer
 test/
   banco_test.dart        regras de estado, estoque e migrações do banco
   open_food_facts_test.dart  leitura das respostas do Open Food Facts (simuladas)
@@ -120,6 +122,9 @@ stateDiagram-v2
 - Qualquer outra transição lança `TransicaoInvalida`, e nada fica gravado pela metade (cada
   operação roda numa transação).
 - Toda mudança gera uma linha em `movimentos`, usada depois para gráficos e desperdício.
+- **Desfazer** (`desfazerUltimaAcao`) volta a última ação de uma unidade (abrir → fechado;
+  acabou ou descartado → aberto ou fechado, conforme estava) e apaga a linha do histórico.
+  `desfazerEntrada` apaga uma unidade que entrou por engano e ainda não foi usada.
 - **Ao bipar para abrir**, o app escolhe a unidade fechada que vence primeiro; sem validade, a
   mais antiga.
 - **Ao bipar para acabar**, escolhe a unidade aberta há mais tempo; se não houver, a próxima a abrir.

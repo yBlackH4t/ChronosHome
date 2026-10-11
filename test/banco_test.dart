@@ -201,6 +201,53 @@ void main() {
     });
   });
 
+  group('desfazer a última ação', () {
+    test('abrir por engano: volta a fechado e some do histórico', () async {
+      final id = await maionese();
+      final [u] = await banco.darEntrada(id);
+      await banco.abrir(u);
+
+      await banco.desfazerUltimaAcao(u);
+
+      final [volta] = await banco.unidadesEmCasa(id);
+      expect(volta.estado, EstadoUnidade.fechado);
+      expect(volta.abertoEm, isNull);
+      expect((await banco.historico(u)).map((m) => m.acao), [AcaoMovimento.entrada]);
+    });
+
+    test('acabou por engano: volta a aberto se estava aberto', () async {
+      final id = await maionese();
+      final [u] = await banco.darEntrada(id);
+      await banco.abrir(u);
+      await banco.acabar(u);
+
+      await banco.desfazerUltimaAcao(u);
+
+      final [volta] = await banco.unidadesEmCasa(id);
+      expect(volta.estado, EstadoUnidade.aberto);
+      expect(volta.saiuEm, isNull);
+      expect(volta.abertoEm, isNotNull);
+    });
+
+    test('descartou por engano direto de fechado: volta a fechado', () async {
+      final id = await maionese();
+      final [u] = await banco.darEntrada(id);
+      await banco.descartar(u);
+
+      await banco.desfazerUltimaAcao(u);
+
+      final [volta] = await banco.unidadesEmCasa(id);
+      expect(volta.estado, EstadoUnidade.fechado);
+    });
+
+    test('só a entrada no histórico: não há o que desfazer aqui', () async {
+      final id = await maionese();
+      final [u] = await banco.darEntrada(id);
+
+      expect(() => banco.desfazerUltimaAcao(u), throwsA(isA<TransicaoInvalida>()));
+    });
+  });
+
   test('o estoque conta fechados e abertos e ignora o que saiu', () async {
     final id = await maionese();
     await banco.cadastrarProduto(nome: 'Arroz');

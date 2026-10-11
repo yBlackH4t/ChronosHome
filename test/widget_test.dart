@@ -38,13 +38,53 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
   }
 
-  testWidgets('estoque vazio mostra a orientação e o botão Compras', (tester) async {
+  testWidgets('estoque vazio mostra a orientação e os botões Compras e Cozinha', (tester) async {
     await tester.pumpWidget(ChronosHomeApp(banco: Future.value(banco), openFoodFacts: semInternet()));
     await esperar(tester);
 
     expect(find.text('Chronos Home'), findsOneWidget);
     expect(find.textContaining('O estoque está vazio'), findsOneWidget);
     expect(find.text('Compras'), findsOneWidget);
+    expect(find.text('Cozinha'), findsOneWidget);
+    await encerrar(tester);
+  });
+
+  testWidgets('tocar no produto abre o painel; Abrir e depois Desfazer', (tester) async {
+    late String id;
+    await tester.runAsync(() async {
+      id = await banco.cadastrarProduto(nome: 'Extrato de tomate');
+      await banco.darEntrada(id, quantidade: 2);
+    });
+
+    await tester.pumpWidget(ChronosHomeApp(banco: Future.value(banco), openFoodFacts: semInternet()));
+    await esperar(tester);
+    await tester.tap(find.text('Extrato de tomate'));
+    await esperar(tester);
+
+    // Nada aberto ainda: a sugestão principal é Abrir.
+    expect(find.text('2 fechados'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Abrir'), findsOneWidget);
+    expect(find.widgetWithText(OutlinedButton, 'Acabou'), findsOneWidget);
+
+    await tester.tap(find.text('Abrir'));
+    await esperar(tester);
+    expect(find.text('Extrato de tomate: aberto'), findsOneWidget);
+    final abertos = await tester.runAsync(() async =>
+        (await banco.unidadesEmCasa(id)).where((u) => u.estado == EstadoUnidade.aberto).length);
+    expect(abertos, 1);
+
+    // Com um aberto, a sugestão principal passa a ser Acabou.
+    await tester.tap(find.text('Extrato de tomate'));
+    await esperar(tester);
+    expect(find.widgetWithText(FilledButton, 'Acabou'), findsOneWidget);
+    await tester.tapAt(const Offset(10, 10)); // fecha o painel
+    await esperar(tester);
+
+    await tester.tap(find.text('Desfazer'));
+    await esperar(tester);
+    final abertosDepois = await tester.runAsync(() async =>
+        (await banco.unidadesEmCasa(id)).where((u) => u.estado == EstadoUnidade.aberto).length);
+    expect(abertosDepois, 0);
     await encerrar(tester);
   });
 

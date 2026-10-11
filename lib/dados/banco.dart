@@ -285,6 +285,29 @@ class Banco extends _$Banco {
     });
   }
 
+  /// Desfaz a última ação de uma unidade (tocou em Abrir, Acabou ou Descartar por engano):
+  /// volta o estado anterior e apaga essa linha do histórico.
+  Future<void> desfazerUltimaAcao(String unidadeId) {
+    return transaction(() async {
+      final unidade = await _unidade(unidadeId);
+      final ultimo = (await historico(unidadeId)).lastOrNull;
+      final UnidadesCompanion volta;
+      switch (ultimo?.acao) {
+        case AcaoMovimento.abrir when unidade.estado == EstadoUnidade.aberto:
+          volta = const UnidadesCompanion(estado: Value(EstadoUnidade.fechado), abertoEm: Value(null));
+        case AcaoMovimento.acabou || AcaoMovimento.descartar when !_estaEmCasa(unidade):
+          volta = UnidadesCompanion(
+            estado: Value(unidade.abertoEm == null ? EstadoUnidade.fechado : EstadoUnidade.aberto),
+            saiuEm: const Value(null),
+          );
+        default:
+          throw const TransicaoInvalida('Não há uma ação para desfazer nesta unidade.');
+      }
+      await (update(unidades)..where((u) => u.id.equals(unidadeId))).write(volta);
+      await (delete(movimentos)..where((m) => m.id.equals(ultimo!.id))).go();
+    });
+  }
+
   /// Todos os produtos com quantas unidades há em casa; a lista se atualiza sozinha.
   Stream<List<ItemDoEstoque>> observarEstoque() {
     return customSelect(
