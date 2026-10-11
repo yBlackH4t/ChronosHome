@@ -1,0 +1,44 @@
+name: chronos_home
+description: "Estoque da casa no celular"
+publish_to: 'none'
+
+# versão do app (versionName) + número do build (versionCode no Android)
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.13.4
+
+# Versões fixas, todas lançadas há pelo menos duas semanas (regra do CLAUDE.md).
+dependencies:
+  flutter:
+    sdk: flutter
+  # Câmera lendo códigos de barras (EAN-13, EAN-8, UPC, QR).
+  mobile_scanner: 7.4.2
+  # Banco SQLite com tipos e migrações.
+  drift: 2.35.0
+  # SQLite nativo; a configuração "hooks" no fim deste arquivo troca pelo SQLCipher.
+  sqlite3: 3.6.0
+  # Guarda a chave do banco no Android Keystore.
+  flutter_secure_storage: 11.2.0
+  path_provider: 2.1.6
+  path: 1.9.1
+  uuid: 4.6.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: 6.0.0
+  # Geram o código do drift: dart run build_runner build
+  build_runner: 2.16.1
+  drift_dev: 2.35.0
+  # Fixo: o analyzer 14.5.0 (de 06/10/2026) quebra o drift_dev 2.35.0.
+  analyzer: 14.4.0
+
+flutter:
+  uses-material-design: true
+
+# O pacote sqlite3 baixa o SQLCipher (banco criptografado) no lugar do SQLite comum.
+hooks:
+  user_defines:
+    sqlite3:
+      source: sqlcipher

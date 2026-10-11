@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ícone do Chronos Home: uma casa com um relógio dentro.
+     Desenhado na grade de 108x108 do ícone adaptável; o conteúdo fica na área segura (centro 66x66). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Casa: telhado e paredes. -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,28 L80,51 L74,51 L74,80 L34,80 L34,51 L28,51 Z" />
+    <!-- Mostrador do relógio, vazado na cor de fundo. -->
+    <path
+        android:fillColor="#1E5E57"
+        android:pathData="M44,64 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0 Z" />
+    <!-- Ponteiros. -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M54,57.5 L54,64 L59,67" />
+</vector>

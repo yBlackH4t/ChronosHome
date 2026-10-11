@@ -1,0 +1,195 @@
+import 'package:drift/drift.dart' show driftRuntimeOptions;
+import 'package:drift/native.dart';
+import 'package:drift_dev/api/migrations_native.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import 'package:chronos_home/dados/banco.dart';
+
+void main() {
+  driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
+
+  late Banco banco;
+  late DateTime relogio;
+
+  /// Avança o relógio do banco.
+  void passar(Duration tempo) => relogio = relogio.add(tempo);
+
+  setUp(() {
+    relogio = DateTime(2026, 10, 11, 9);
+    banco = Banco(NativeDatabase.memory(), agora: () => relogio);
+  });
+
+  tearDown(() => banco.close());
+
+  Future<String> maionese() => banco.cadastrarProduto(
+        nome: 'Maionese',
+        marca: 'Hellmann\'s',
+        diasValidadeAberto: 5,
+        codigos: ['7891234567895'],
+      );
+
+  group('banco novo', () {
+    test('cria os locais padrão', () async {
+      final nomes = (await banco.listarLocais()).map((l) => l.nome);
+      expect(nomes, containsAll(locaisPadrao));
+    });
+
+    test('o esquema bate com as tabelas declaradas', () async {
+      await banco.validateDatabaseSchema();
+    });
+  });
+
+  group('produtos e códigos', () {
+    test('acha o produto pelo código de barras', () async {
+      final id = await maionese();
+
+      final achado = await banco.produtoPorCodigo('7891234567895');
+      expect(achado?.id, id);
+      expect(achado?.nome, 'Maionese');
+      expect(await banco.produtoPorCodigo('000'), isNull);
+    });
+
+    test('um produto aceita vários códigos', () async {
+      final id = await maionese();
+      await banco.adicionarCodigo(id, '7890000000001');
+
+      expect((await banco.produtoPorCodigo('7890000000001'))?.id, id);
+      expect((await banco.produtoPorCodigo('7891234567895'))?.id, id);
+    });
+  });
+
+  group('regras de estado', () {
+    test('entrada cria unidades fechadas e registra o movimento', () async {
+      final id = await maionese();
+      final unidades = await banco.darEntrada(id, quantidade: 3);
+
+      expect(unidades, hasLength(3));
+      expect(await banco.quantidadeEmCasa(id), 3);
+      final emCasa = await banco.unidadesEmCasa(id);
+      expect(emCasa.every((u) => u.estado == EstadoUnidade.fechado), isTrue);
+      final historico = await banco.historico(unidades.first);
+      expect(historico.map((m) => m.acao), [AcaoMovimento.entrada]);
+    });
+
+    test('fechado → aberto → acabou, com datas e histórico', () async {
+      final id = await maionese();
+      final [unidade] = await banco.darEntrada(id);
+
+      passar(const Duration(days: 1));
+      await banco.abrir(unidade);
+      passar(const Duration(days: 4));
+      await banco.acabar(unidade);
+
+      final u = (await (banco.select(banco.unidades)..where((t) => t.id.equals(unidade))).getSingle());
+      expect(u.estado, EstadoUnidade.acabou);
+      expect(u.abertoEm, DateTime(2026, 10, 12, 9));
+      expect(u.saiuEm, DateTime(2026, 10, 16, 9));
+      expect(await banco.quantidadeEmCasa(id), 0);
+      expect(
+        (await banco.historico(unidade)).map((m) => m.acao),
+        [AcaoMovimento.entrada, AcaoMovimento.abrir, AcaoMovimento.acabou],
+      );
+    });
+
+    test('dá para acabar ou descartar direto de fechado', () async {
+      final id = await maionese();
+      final [a, b] = await banco.darEntrada(id, quantidade: 2);
+
+      await banco.acabar(a);
+      await banco.descartar(b);
+
+      expect(await banco.quantidadeEmCasa(id), 0);
+    });
+
+    test('não abre o que já está aberto ou já saiu', () async {
+      final id = await maionese();
+      final [unidade] = await banco.darEntrada(id);
+      await banco.abrir(unidade);
+
+      expect(() => banco.abrir(unidade), throwsA(isA<TransicaoInvalida>()));
+      await banco.acabar(unidade);
+      expect(() => banco.abrir(unidade), throwsA(isA<TransicaoInvalida>()));
+      expect(() => banco.acabar(unidade), throwsA(isA<TransicaoInvalida>()));
+      expect(() => banco.descartar(unidade), throwsA(isA<TransicaoInvalida>()));
+    });
+
+    test('transição recusada não deixa nada pela metade', () async {
+      final id = await maionese();
+      final [unidade] = await banco.darEntrada(id);
+      await banco.descartar(unidade);
+
+      await expectLater(banco.acabar(unidade), throwsA(isA<TransicaoInvalida>()));
+      expect((await banco.historico(unidade)).map((m) => m.acao),
+          [AcaoMovimento.entrada, AcaoMovimento.descartar]);
+    });
+
+    test('mover troca o local e fica no histórico', () async {
+      final id = await maionese();
+      final locais = await banco.listarLocais();
+      final geladeira = locais.firstWhere((l) => l.nome == 'Geladeira');
+      final [unidade] = await banco.darEntrada(id);
+
+      await banco.mover(unidade, geladeira.id);
+
+      final [u] = await banco.unidadesEmCasa(id);
+      expect(u.localId, geladeira.id);
+      final ultimo = (await banco.historico(unidade)).last;
+      expect(ultimo.acao, AcaoMovimento.mover);
+      expect(ultimo.localId, geladeira.id);
+    });
+
+    test('quantidade de entrada precisa ser positiva', () async {
+      final id = await maionese();
+      expect(() => banco.darEntrada(id, quantidade: 0), throwsA(isA<TransicaoInvalida>()));
+    });
+  });
+
+  group('qual unidade usar ao bipar', () {
+    test('abre primeiro a que vence antes; sem validade, a mais antiga', () async {
+      final id = await maionese();
+      final [semValidade] = await banco.darEntrada(id);
+      passar(const Duration(days: 1));
+      final [venceDepois] = await banco.darEntrada(id, venceEm: DateTime(2026, 12, 1));
+      final [venceAntes] = await banco.darEntrada(id, venceEm: DateTime(2026, 11, 1));
+
+      expect((await banco.unidadeParaAbrir(id))?.id, venceAntes);
+      await banco.abrir(venceAntes);
+      expect((await banco.unidadeParaAbrir(id))?.id, venceDepois);
+      await banco.abrir(venceDepois);
+      expect((await banco.unidadeParaAbrir(id))?.id, semValidade);
+    });
+
+    test('acaba primeiro a aberta há mais tempo; se nenhuma aberta, a próxima a abrir', () async {
+      final id = await maionese();
+      final [a, b] = await banco.darEntrada(id, quantidade: 2);
+
+      expect((await banco.unidadeParaAcabar(id))?.id, a);
+
+      await banco.abrir(b);
+      passar(const Duration(hours: 1));
+      await banco.abrir(a);
+      expect((await banco.unidadeParaAcabar(id))?.id, b);
+    });
+
+    test('sem nada em casa, não sugere unidade', () async {
+      final id = await maionese();
+      expect(await banco.unidadeParaAbrir(id), isNull);
+      expect(await banco.unidadeParaAcabar(id), isNull);
+    });
+  });
+
+  test('migração: o banco do passo 2 (versão 1) ganha as tabelas novas e mantém as leituras', () async {
+    final antigo = Banco(NativeDatabase.memory(setup: (db) {
+      // O mesmo SQL que o drift gerou na versão 1.
+      db.execute('CREATE TABLE IF NOT EXISTS "leituras" ("id" TEXT NOT NULL, "codigo" TEXT NOT NULL, '
+          '"formato" TEXT NOT NULL, "lido_em" INTEGER NOT NULL, PRIMARY KEY ("id"))');
+      db.execute("INSERT INTO leituras VALUES ('l1', '7891234567895', 'ean13', 0)");
+      db.execute('PRAGMA user_version = 1');
+    }));
+    addTearDown(antigo.close);
+
+    expect(await antigo.contarLeituras(), 1);
+    expect((await antigo.listarLocais()).map((l) => l.nome), containsAll(locaisPadrao));
+    await antigo.validateDatabaseSchema();
+  });
+}

@@ -46,7 +46,7 @@ O uso típico:
 | Estado | `flutter_riverpod` | estado das telas, testável |
 | Navegação | `go_router` | abas e telas |
 | Banco | `drift` (SQLite com tipos e migrações) | dados no celular |
-| Criptografia do banco | `sqlcipher_flutter_libs` (SQLCipher) | banco ilegível fora do app |
+| Criptografia do banco | `sqlite3` 3.x com `hooks: user_defines: sqlite3: source: sqlcipher` no `pubspec.yaml` (o `sqlcipher_flutter_libs` foi descontinuado) | banco ilegível fora do app |
 | Chaves | `flutter_secure_storage` (Android Keystore) | chave do banco e a do Groq |
 | Desbloqueio | `local_auth` (digital) | abrir o app com a digital |
 | Código de barras | `mobile_scanner` | câmera lendo EAN-13, EAN-8, UPC, QR |
@@ -107,6 +107,36 @@ funcionando neste PC:
 | 9 | **Assistente** (Groq, chave digitada no app) | responde sobre o estoque |
 | 10 | **Segurança:** digital para abrir, backup e restauração | restaurar um backup em outro celular |
 | 11 | **Versão 1.0:** APK assinado, GitHub Release, Obtainium | instalado e atualizando pelo Obtainium |
+
+**Estado (2026-10-11):** passo 0 feito. Flutter **3.47.5** (stable, Dart 3.13.4) em
+`C:\src\flutter`, com `C:\src\flutter\bin` no PATH do usuário e analytics desligado. A 3.47.7
+existia, mas tinha menos de duas semanas. `flutter doctor` sem problemas: licenças Android aceitas
+e o A10s aparece como `SM A107M (android-arm)`.
+
+**Passo 1 (2026-10-11):** projeto criado com `flutter create` (só Android), pacote
+`com.yblackh4t.chronos_home`, nome "Chronos Home", Material 3 com tema claro e escuro (cor
+`#1E5E57`) e ícone próprio (casa com relógio: vetor adaptável + PNGs). `cupertino_icons` removido;
+`flutter_lints` fixo em 6.0.0. O Flutter 3.47.5 pede o NDK 28.2, que não está instalado; o
+`android/app/build.gradle.kts` aponta para o **NDK 30.0.16248370** que já existe no PC, e o build
+`armeabi-v7a` passa. APK de debug instalado no A10s.
+
+**Passo 2 (2026-10-11):** telas de prova (Bipar, Banco criptografado, Animação) em `lib/telas/`,
+banco drift em `lib/dados/` com uma tabela `leituras` provisória. Versões: `mobile_scanner` 7.4.2,
+`drift`/`drift_dev` 2.35.0, `sqlite3` 3.6.0 (SQLCipher), `flutter_secure_storage` 11.2.0,
+`build_runner` 2.16.1, `uuid` 4.6.0. O `analyzer` está fixo em 14.4.0 porque o 14.5.0 quebra o
+`drift_dev` 2.35.0. A chave do banco (32 bytes aleatórios) fica no Keystore; o arquivo é
+`chronos_home.db` na pasta de documentos do app. O APK leva `lib/armeabi-v7a/libsqlcipher.so`.
+Depois de mudar `lib/dados/banco.dart`: `dart run build_runner build`. **Testado pelo dono no A10s:
+câmera, banco criptografado (sobrevive a fechar e abrir) e animação funcionando.**
+
+**Passo 3 (2026-10-11):** modelo da seção 5 em `lib/dados/tabelas.dart` (esquema **versão 2**) e
+regras em `lib/dados/banco.dart`: `cadastrarProduto`, `produtoPorCodigo`, `darEntrada`, `abrir`,
+`acabar`, `descartar`, `mover`, `unidadeParaAbrir` (a que vence primeiro; sem validade, a mais
+antiga) e `unidadeParaAcabar` (a aberta há mais tempo). Transição proibida lança
+`TransicaoInvalida` e nada fica pela metade (tudo em transação). Locais padrão: Despensa, Geladeira,
+Freezer. `foreign_keys` ligado. A migração 1 → 2 cria as tabelas novas e mantém a `leituras` do
+passo 2 (provisória, sai no passo 4). Testes em `test/banco_test.dart` (18 no total), incluindo a
+migração e a conferência do esquema com `validateDatabaseSchema`.
 
 Cada passo: `flutter analyze`, `flutter test`, build e teste no A10s, depois commit e push numa
 branch.
