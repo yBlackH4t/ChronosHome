@@ -166,7 +166,8 @@ o aberto). **Comprar**: produtos abaixo do estoque mínimo com quanto falta, nú
 "Copiar a lista" (texto para colar no WhatsApp). **Estoque**: tudo o que tem em casa. As contas
 ficam em `lib/dados/resumo.dart` (sem banco nem tela, testadas com qualquer data). O painel do
 produto ganhou os ajustes **Estoque mínimo** e **Dura depois de aberto** (`ajustarProduto`), que
-alimentam a lista e os avisos. `observarEstoque` agora traz `abertoDesde`. 43 testes.
+alimentam a lista e os avisos. `observarEstoque` agora traz `abertoDesde`. 43 testes. **Testado
+pelo dono no A10s: funcionando.**
 
 Cada passo: `flutter analyze`, `flutter test`, build e teste no A10s, depois commit e push numa
 branch.
