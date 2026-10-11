@@ -126,7 +126,8 @@ banco drift em `lib/dados/` com uma tabela `leituras` provisória. Versões: `mo
 `build_runner` 2.16.1, `uuid` 4.6.0. O `analyzer` está fixo em 14.4.0 porque o 14.5.0 quebra o
 `drift_dev` 2.35.0. A chave do banco (32 bytes aleatórios) fica no Keystore; o arquivo é
 `chronos_home.db` na pasta de documentos do app. O APK leva `lib/armeabi-v7a/libsqlcipher.so`.
-Depois de mudar `lib/dados/banco.dart`: `dart run build_runner build`.
+Depois de mudar `lib/dados/banco.dart`: `dart run build_runner build`. **Testado pelo dono no A10s:
+câmera, banco criptografado (sobrevive a fechar e abrir) e animação funcionando.**
 
 Cada passo: `flutter analyze`, `flutter test`, build e teste no A10s, depois commit e push numa
 branch.
