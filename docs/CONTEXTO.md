@@ -159,6 +159,16 @@ a linha do histórico). Código não cadastrado manda usar Compras. O mesmo pain
 produto no Início, que agora tem os botões Compras e Cozinha embaixo. 33 testes. **Testado pelo
 dono no A10s: funcionando.**
 
+**Passo 6 (2026-10-11):** o **Início** tem três abas. **Agora**: produtos abertos, do mais
+urgente para o menos (passou do prazo, acabando, depois o aberto há mais tempo), com "aberto há N
+dias" contado em dias de calendário e o aviso pelo prazo depois de aberto; e **Acabando** (só sobrou
+o aberto). **Comprar**: produtos abaixo do estoque mínimo com quanto falta, número na aba e botão
+"Copiar a lista" (texto para colar no WhatsApp). **Estoque**: tudo o que tem em casa. As contas
+ficam em `lib/dados/resumo.dart` (sem banco nem tela, testadas com qualquer data). O painel do
+produto ganhou os ajustes **Estoque mínimo** e **Dura depois de aberto** (`ajustarProduto`), que
+alimentam a lista e os avisos. `observarEstoque` agora traz `abertoDesde`. 43 testes. **Testado
+pelo dono no A10s: funcionando.**
+
 Cada passo: `flutter analyze`, `flutter test`, build e teste no A10s, depois commit e push numa
 branch.
 

@@ -19,11 +19,19 @@ class TransicaoInvalida implements Exception {
 
 /// Um produto e quantas unidades dele estão em casa.
 class ItemDoEstoque {
-  const ItemDoEstoque({required this.produto, required this.fechados, required this.abertos});
+  const ItemDoEstoque({
+    required this.produto,
+    required this.fechados,
+    required this.abertos,
+    this.abertoDesde,
+  });
 
   final Produto produto;
   final int fechados;
   final int abertos;
+
+  /// Quando foi aberta a unidade aberta há mais tempo (vazio se nenhuma está aberta).
+  final DateTime? abertoDesde;
 
   int get emCasa => fechados + abertos;
 }
@@ -105,6 +113,21 @@ class Banco extends _$Banco {
       return id;
     });
   }
+
+  /// Muda os números que alimentam os avisos e a lista de compras.
+  /// [diasValidadeAberto] nulo = não avisar.
+  Future<void> ajustarProduto(String produtoId, {required int estoqueMinimo, int? diasValidadeAberto}) {
+    if (estoqueMinimo < 0 || (diasValidadeAberto != null && diasValidadeAberto < 1)) {
+      throw const TransicaoInvalida('Estoque mínimo não pode ser negativo, e o prazo depois de aberto é de pelo menos 1 dia.');
+    }
+    return (update(produtos)..where((p) => p.id.equals(produtoId))).write(ProdutosCompanion(
+      estoqueMinimo: Value(estoqueMinimo),
+      diasValidadeAberto: Value(diasValidadeAberto),
+    ));
+  }
+
+  Future<Produto> produtoPorId(String id) =>
+      (select(produtos)..where((p) => p.id.equals(id))).getSingle();
 
   /// Liga um código de barras a um produto. Se o código já era de outro produto, passa para este.
   Future<void> adicionarCodigo(String produtoId, String codigo) {
@@ -313,7 +336,8 @@ class Banco extends _$Banco {
     return customSelect(
       'SELECT p.*, '
       "COALESCE(SUM(u.estado = 'fechado'), 0) AS fechados, "
-      "COALESCE(SUM(u.estado = 'aberto'), 0) AS abertos "
+      "COALESCE(SUM(u.estado = 'aberto'), 0) AS abertos, "
+      "MIN(CASE WHEN u.estado = 'aberto' THEN u.aberto_em END) AS aberto_desde "
       'FROM produtos p '
       "LEFT JOIN unidades u ON u.produto_id = p.id AND u.estado IN ('fechado', 'aberto') "
       'GROUP BY p.id '
@@ -325,6 +349,7 @@ class Banco extends _$Banco {
               produto: produtos.map(linha.data),
               fechados: linha.read<int>('fechados'),
               abertos: linha.read<int>('abertos'),
+              abertoDesde: linha.readNullable<DateTime>('aberto_desde'),
             ),
         ]);
   }
