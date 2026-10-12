@@ -12,10 +12,13 @@ lib/
     tabelas.dart         as tabelas do banco (drift) e os enums de estado
     banco.dart           o banco e as regras (entrada, abrir, acabou, descartar, mover)
     banco.g.dart         código gerado pelo drift: não editar à mão
-    resumo.dart          contas do Início: abertos e prazos, acabando, lista de compras
+    resumo.dart          contas do Início: vencendo, abertos e prazos, acabando, lista de compras
+    avisos.dart          quais notificações agendar e quando
+    datas.dart           dias de calendário e textos de data
     abrir_banco.dart     abre o arquivo com SQLCipher e cuida da chave no Keystore
   servicos/
     open_food_facts.dart nome, marca, categoria e foto pelo código de barras
+    avisos_no_celular.dart agenda as notificações no Android
   telas/
     inicio.dart          abas Agora, Comprar e Estoque, e os botões Compras e Cozinha
     compras.dart         bipar o que chegou do mercado
@@ -23,11 +26,13 @@ lib/
     produto_novo.dart    cadastro de um código que o app não conhece
   componentes/
     erro_da_camera.dart  mensagem legível quando a câmera não abre
+    escolher_validade.dart calendário da validade
     acoes_do_produto.dart painel com Abrir, Acabou, Descartar, Desfazer e os ajustes do produto
 test/
   banco_test.dart        regras de estado, estoque e migrações do banco
   open_food_facts_test.dart  leitura das respostas do Open Food Facts (simuladas)
-  resumo_test.dart       prazos, ordem dos abertos, acabando e lista de compras
+  resumo_test.dart       prazos, ordem dos abertos, vencendo, acabando e lista de compras
+  avisos_test.dart       datas e textos das notificações
   widget_test.dart       telas Início e Produto novo, e o SQLCipher
 android/                 projeto Android (ícone, nome, NDK, permissões)
 docs/                    documentação
@@ -137,11 +142,27 @@ stateDiagram-v2
 
 | Lista | Regra |
 |---|---|
+| Vencendo | a validade mais próxima entre as unidades em casa está a 3 dias ou menos (ou já passou) |
 | Abertos | produtos com unidade aberta; ordem: passou do prazo, acabando (hoje ou amanhã é o último dia), depois o aberto há mais tempo |
 | Acabando | tem aberto e nenhum fechado, e ainda não está na lista de compras |
 | Lista de compras | em casa abaixo do `estoque_minimo`; quantidade = mínimo − em casa |
 
 "Aberto há N dias" conta dias de calendário: aberto ontem às 23h já conta 1 dia hoje cedo.
+
+## Avisos no celular
+
+`lib/dados/avisos.dart` transforma o estoque numa lista de notificações, sempre às 9h:
+
+| Quando | Aviso |
+|---|---|
+| véspera da validade | "X vence amanhã" |
+| dia da validade | "X vence hoje" |
+| último dia do prazo depois de aberto | "X: use hoje" |
+| dia seguinte | "X passou do prazo" |
+
+Só entram datas futuras (o que já passou aparece na aba Agora), no máximo 40. A cada mudança no
+estoque, `AvisosNoCelular` cancela os agendados (não os que já estão na tela) e agenda a lista
+nova. O Android guarda os alarmes e os reagenda ao reiniciar o celular.
 
 ## Migrações
 
