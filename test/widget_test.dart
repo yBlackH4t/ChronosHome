@@ -73,6 +73,21 @@ void main() {
     await encerrar(tester);
   });
 
+  testWidgets('Agora mostra o que vence amanhã', (tester) async {
+    final amanha = DateTime.now().add(const Duration(days: 1));
+    await tester.runAsync(() async {
+      final id = await banco.cadastrarProduto(nome: 'Iogurte');
+      await banco.darEntrada(id, venceEm: amanha);
+    });
+
+    await tester.pumpWidget(ChronosHomeApp(banco: Future.value(banco), openFoodFacts: semInternet()));
+    await esperar(tester);
+
+    expect(find.textContaining('Vencendo'), findsOneWidget);
+    expect(find.textContaining('vence amanhã'), findsOneWidget);
+    await encerrar(tester);
+  });
+
   testWidgets('no painel, o + do estoque mínimo põe o produto na lista de compras', (tester) async {
     await tester.runAsync(() async {
       final id = await banco.cadastrarProduto(nome: 'Café');

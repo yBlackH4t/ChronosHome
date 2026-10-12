@@ -24,6 +24,7 @@ class ItemDoEstoque {
     required this.fechados,
     required this.abertos,
     this.abertoDesde,
+    this.venceEm,
   });
 
   final Produto produto;
@@ -32,6 +33,9 @@ class ItemDoEstoque {
 
   /// Quando foi aberta a unidade aberta há mais tempo (vazio se nenhuma está aberta).
   final DateTime? abertoDesde;
+
+  /// A validade mais próxima entre as unidades em casa (vazio se nenhuma tem validade).
+  final DateTime? venceEm;
 
   int get emCasa => fechados + abertos;
 }
@@ -294,6 +298,12 @@ class Banco extends _$Banco {
     ));
   }
 
+  /// Põe (ou tira, com `null`) a validade impressa na embalagem de unidades que estão em casa.
+  Future<void> definirValidade(List<String> unidadeIds, DateTime? venceEm) {
+    return (update(unidades)..where((u) => u.id.isIn(unidadeIds) & u.estado.isInValues(_emCasa)))
+        .write(UnidadesCompanion(venceEm: Value(venceEm)));
+  }
+
   /// Desfaz uma entrada feita por engano (bipou duas vezes): apaga a unidade e o histórico dela.
   /// Só vale enquanto nada mais aconteceu com a unidade.
   Future<void> desfazerEntrada(String unidadeId) {
@@ -337,7 +347,8 @@ class Banco extends _$Banco {
       'SELECT p.*, '
       "COALESCE(SUM(u.estado = 'fechado'), 0) AS fechados, "
       "COALESCE(SUM(u.estado = 'aberto'), 0) AS abertos, "
-      "MIN(CASE WHEN u.estado = 'aberto' THEN u.aberto_em END) AS aberto_desde "
+      "MIN(CASE WHEN u.estado = 'aberto' THEN u.aberto_em END) AS aberto_desde, "
+      'MIN(u.vence_em) AS vence_em '
       'FROM produtos p '
       "LEFT JOIN unidades u ON u.produto_id = p.id AND u.estado IN ('fechado', 'aberto') "
       'GROUP BY p.id '
@@ -350,6 +361,7 @@ class Banco extends _$Banco {
               fechados: linha.read<int>('fechados'),
               abertos: linha.read<int>('abertos'),
               abertoDesde: linha.readNullable<DateTime>('aberto_desde'),
+              venceEm: linha.readNullable<DateTime>('vence_em'),
             ),
         ]);
   }

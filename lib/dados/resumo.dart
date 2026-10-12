@@ -1,4 +1,5 @@
 import 'banco.dart';
+import 'datas.dart';
 
 /// Situação de um produto aberto em relação ao prazo depois de aberto.
 enum Prazo {
@@ -24,6 +25,16 @@ class Aberto {
   final int? diasRestantes;
 }
 
+/// Um produto com validade perto (ou já vencida), para a seção "Vencendo" do Início.
+class Vencendo {
+  const Vencendo(this.item, this.diasRestantes);
+
+  final ItemDoEstoque item;
+
+  /// Dias até a validade (0 = hoje, negativo = já venceu).
+  final int diasRestantes;
+}
+
 /// Um produto para comprar e quanto falta para chegar ao estoque mínimo.
 class ParaComprar {
   const ParaComprar(this.item, this.quantidade);
@@ -34,10 +45,20 @@ class ParaComprar {
 
 /// As contas do Início, separadas do banco e das telas para serem testadas com qualquer data.
 class Resumo {
-  Resumo(this.estoque, {required DateTime agora}) : _hoje = _soData(agora);
+  Resumo(this.estoque, {required DateTime agora}) : _hoje = soData(agora);
+
+  /// Até quantos dias antes da validade o produto aparece em "Vencendo".
+  static const diasDeAntecedencia = 3;
 
   final List<ItemDoEstoque> estoque;
   final DateTime _hoje;
+
+  /// Produtos com validade nos próximos [diasDeAntecedencia] dias ou já vencida, o mais urgente primeiro.
+  late final List<Vencendo> vencendo = [
+    for (final item in estoque)
+      if (item.venceEm != null && diasEntre(_hoje, item.venceEm!) <= diasDeAntecedencia)
+        Vencendo(item, diasEntre(_hoje, item.venceEm!)),
+  ]..sort((a, b) => a.diasRestantes.compareTo(b.diasRestantes));
 
   /// Produtos com unidade aberta: primeiro os que passaram do prazo, depois os que estão acabando,
   /// e então os demais, do aberto há mais tempo para o mais recente.
@@ -70,7 +91,7 @@ class Resumo {
   static bool _naLista(ItemDoEstoque item) => item.emCasa < item.produto.estoqueMinimo;
 
   Aberto _aberto(ItemDoEstoque item) {
-    final dias = _hoje.difference(_soData(item.abertoDesde!)).inDays;
+    final dias = diasEntre(item.abertoDesde!, _hoje);
     final prazo = item.produto.diasValidadeAberto;
     if (prazo == null) return Aberto(item: item, dias: dias, prazo: Prazo.semPrazo);
     final restantes = prazo - dias;
@@ -95,7 +116,4 @@ class Resumo {
     final porPeso = peso(a).compareTo(peso(b));
     return porPeso != 0 ? porPeso : b.dias.compareTo(a.dias);
   }
-
-  /// Conta dias de calendário: aberto ontem às 23h já é "1 dia" hoje de manhã.
-  static DateTime _soData(DateTime d) => DateTime(d.year, d.month, d.day);
 }

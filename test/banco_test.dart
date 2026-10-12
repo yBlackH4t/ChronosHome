@@ -261,6 +261,22 @@ void main() {
         throwsA(isA<TransicaoInvalida>()));
   });
 
+  test('validade: definida na entrada ou depois; o estoque mostra a mais próxima entre as em casa', () async {
+    final id = await maionese();
+    final [a] = await banco.darEntrada(id, venceEm: DateTime(2026, 11, 1));
+    final [b, c] = await banco.darEntrada(id, quantidade: 2);
+
+    await banco.definirValidade([b, c], DateTime(2026, 10, 20));
+    expect((await banco.observarEstoque().first).single.venceEm, DateTime(2026, 10, 20));
+
+    // Unidades que saíram de casa não contam e não mudam mais.
+    await banco.acabar(b);
+    await banco.acabar(c);
+    await banco.definirValidade([b], DateTime(2026, 10, 12));
+    expect((await banco.observarEstoque().first).single.venceEm, DateTime(2026, 11, 1));
+    expect((await banco.unidadeParaAbrir(id))?.id, a);
+  });
+
   test('o estoque informa desde quando está aberta a unidade mais antiga', () async {
     final id = await maionese();
     final [a, b] = await banco.darEntrada(id, quantidade: 2);
