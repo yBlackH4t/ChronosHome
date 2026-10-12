@@ -10,6 +10,7 @@ import '../servicos/avisos_no_celular.dart';
 import '../servicos/open_food_facts.dart';
 import 'compras.dart';
 import 'cozinha.dart';
+import 'graficos.dart';
 
 /// Tela inicial, em três abas:
 /// - Agora: o que está vencendo, o que está aberto (e há quantos dias) e o que está acabando;
@@ -83,6 +84,15 @@ class _AbasState extends State<_Abas> {
           child: Scaffold(
             appBar: AppBar(
               title: const Text('Chronos Home'),
+              actions: [
+                IconButton(
+                  tooltip: 'Gráficos',
+                  icon: const Icon(Icons.insights_rounded),
+                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => TelaGraficos(banco: banco),
+                  )),
+                ),
+              ],
               bottom: TabBar(
                 tabs: [
                   const Tab(text: 'Agora'),
