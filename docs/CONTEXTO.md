@@ -179,7 +179,8 @@ e o dia seguinte; sempre às 9h; no máximo 40, os mais próximos) e o agendamen
 `lib/servicos/avisos_no_celular.dart`, refeito a cada mudança do estoque. Agendamento **inexato**
 (sem pedir permissão de alarme exato): pode atrasar minutos, mas sai no dia certo. Android:
 desugaring ligado (`desugar_jdk_libs` 2.1.4), permissões `POST_NOTIFICATIONS` e
-`RECEIVE_BOOT_COMPLETED` e os recebedores do plugin no manifesto. 50 testes.
+`RECEIVE_BOOT_COMPLETED` e os recebedores do plugin no manifesto. 50 testes. **Testado pelo dono
+no A10s: sem erros.**
 
 Cada passo: `flutter analyze`, `flutter test`, build e teste no A10s, depois commit e push numa
 branch.
