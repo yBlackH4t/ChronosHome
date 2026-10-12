@@ -182,6 +182,14 @@ desugaring ligado (`desugar_jdk_libs` 2.1.4), permissões `POST_NOTIFICATIONS` e
 `RECEIVE_BOOT_COMPLETED` e os recebedores do plugin no manifesto. 50 testes. **Testado pelo dono
 no A10s: sem erros.**
 
+**Passo 8 (2026-10-12):** tela **Gráficos** (`lib/telas/graficos.dart`, botão no topo do Início),
+com `fl_chart` 1.2.0 e filtro de período (3 meses, 6 meses, 1 ano): resumo (entraram, consumidos,
+descartados e % de desperdício = descartados ÷ tudo o que saiu), barras **por mês** (consumidos ×
+descartados, com legenda, toque mostra o número e "Ver os números" em tabela) e os rankings **Mais
+consumidos** e **Mais desperdiçados** (com a parte de cada produto que foi para o lixo). As contas
+ficam em `lib/dados/estatisticas.dart`, lendo o histórico pelo novo `movimentosDesde`. Cores das
+séries: azul e laranja da paleta validada para daltonismo, com versões para tema escuro. 57 testes.
+
 Cada passo: `flutter analyze`, `flutter test`, build e teste no A10s, depois commit e push numa
 branch.
 

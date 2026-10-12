@@ -10,6 +10,7 @@ import 'package:http/testing.dart';
 import 'package:chronos_home/dados/banco.dart';
 import 'package:chronos_home/main.dart';
 import 'package:chronos_home/servicos/open_food_facts.dart';
+import 'package:chronos_home/telas/graficos.dart';
 import 'package:chronos_home/telas/produto_novo.dart';
 
 void main() {
@@ -70,6 +71,33 @@ void main() {
     expect(find.text('Arroz'), findsOneWidget);
     expect(find.text('Tem 1 · mínimo 2'), findsOneWidget);
     expect(find.text('Copiar a lista'), findsOneWidget);
+    await encerrar(tester);
+  });
+
+  testWidgets('Gráficos: vazio sem histórico; com histórico mostra resumo e rankings', (tester) async {
+    await tester.pumpWidget(MaterialApp(home: TelaGraficos(banco: banco)));
+    await esperar(tester);
+    expect(find.textContaining('Ainda não há histórico'), findsOneWidget);
+
+    await tester.runAsync(() async {
+      final leite = await banco.cadastrarProduto(nome: 'Leite');
+      final [a, b, c] = await banco.darEntrada(leite, quantidade: 3);
+      await banco.acabar(a);
+      await banco.acabar(b);
+      await banco.descartar(c);
+    });
+    await tester.pumpWidget(MaterialApp(home: TelaGraficos(key: UniqueKey(), banco: banco)));
+    await esperar(tester);
+
+    expect(find.text('33%'), findsOneWidget); // 1 descartado de 3 que saíram
+    expect(find.text('Por mês'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Mais desperdiçados'), 200, scrollable: find.byType(Scrollable).first);
+    expect(find.text('1 · 33% do que saiu'), findsOneWidget);
+
+    await tester.scrollUntilVisible(find.text('1 ano'), -200, scrollable: find.byType(Scrollable).first);
+    await tester.tap(find.text('1 ano'));
+    await esperar(tester);
+    expect(find.text('33%'), findsOneWidget);
     await encerrar(tester);
   });
 

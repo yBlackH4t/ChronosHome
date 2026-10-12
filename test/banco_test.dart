@@ -277,6 +277,21 @@ void main() {
     expect((await banco.unidadeParaAbrir(id))?.id, a);
   });
 
+  test('o histórico para os gráficos traz o produto e respeita a data inicial', () async {
+    final id = await maionese();
+    final [u] = await banco.darEntrada(id);
+    passar(const Duration(days: 3));
+    await banco.abrir(u);
+    await banco.acabar(u);
+
+    final todos = await banco.movimentosDesde(DateTime(2026, 10, 1));
+    expect(todos.map((m) => m.acao), [AcaoMovimento.entrada, AcaoMovimento.abrir, AcaoMovimento.acabou]);
+    expect(todos.first.produto.nome, 'Maionese');
+
+    final depois = await banco.movimentosDesde(DateTime(2026, 10, 13));
+    expect(depois.map((m) => m.acao), [AcaoMovimento.abrir, AcaoMovimento.acabou]);
+  });
+
   test('o estoque informa desde quando está aberta a unidade mais antiga', () async {
     final id = await maionese();
     final [a, b] = await banco.darEntrada(id, quantidade: 2);

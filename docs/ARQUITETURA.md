@@ -14,6 +14,7 @@ lib/
     banco.g.dart         código gerado pelo drift: não editar à mão
     resumo.dart          contas do Início: vencendo, abertos e prazos, acabando, lista de compras
     avisos.dart          quais notificações agendar e quando
+    estatisticas.dart    contas dos gráficos: totais, por mês e rankings
     datas.dart           dias de calendário e textos de data
     abrir_banco.dart     abre o arquivo com SQLCipher e cuida da chave no Keystore
   servicos/
@@ -23,6 +24,7 @@ lib/
     inicio.dart          abas Agora, Comprar e Estoque, e os botões Compras e Cozinha
     compras.dart         bipar o que chegou do mercado
     cozinha.dart         bipar o que abriu, acabou ou foi descartado
+    graficos.dart        consumo e desperdício por período
     produto_novo.dart    cadastro de um código que o app não conhece
   componentes/
     erro_da_camera.dart  mensagem legível quando a câmera não abre
@@ -33,6 +35,7 @@ test/
   open_food_facts_test.dart  leitura das respostas do Open Food Facts (simuladas)
   resumo_test.dart       prazos, ordem dos abertos, vencendo, acabando e lista de compras
   avisos_test.dart       datas e textos das notificações
+  estatisticas_test.dart totais, meses sem movimento e rankings
   widget_test.dart       telas Início e Produto novo, e o SQLCipher
 android/                 projeto Android (ícone, nome, NDK, permissões)
 docs/                    documentação
@@ -163,6 +166,20 @@ stateDiagram-v2
 Só entram datas futuras (o que já passou aparece na aba Agora), no máximo 40. A cada mudança no
 estoque, `AvisosNoCelular` cancela os agendados (não os que já estão na tela) e agenda a lista
 nova. O Android guarda os alarmes e os reagenda ao reiniciar o celular.
+
+## Gráficos
+
+`lib/dados/estatisticas.dart` lê o histórico (`movimentos`) do período escolhido:
+
+| Número | Conta |
+|---|---|
+| Entraram | movimentos `entrada` |
+| Consumidos | movimentos `acabou` |
+| Descartados | movimentos `descartar` |
+| Desperdício | descartados ÷ (consumidos + descartados) |
+
+Os meses sem movimento aparecem com zero. Os rankings mostram até 5 produtos. Desfazer uma ação
+apaga a linha do histórico, então os gráficos acompanham as correções.
 
 ## Migrações
 

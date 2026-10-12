@@ -40,6 +40,15 @@ class ItemDoEstoque {
   int get emCasa => fechados + abertos;
 }
 
+/// Uma linha do histórico com o produto a que se refere.
+class MovimentoDoProduto {
+  const MovimentoDoProduto({required this.acao, required this.quando, required this.produto});
+
+  final AcaoMovimento acao;
+  final DateTime quando;
+  final Produto produto;
+}
+
 /// Locais criados junto com o banco.
 const locaisPadrao = ['Despensa', 'Geladeira', 'Freezer'];
 
@@ -339,6 +348,23 @@ class Banco extends _$Banco {
       await (update(unidades)..where((u) => u.id.equals(unidadeId))).write(volta);
       await (delete(movimentos)..where((m) => m.id.equals(ultimo!.id))).go();
     });
+  }
+
+  /// O histórico desde [desde], com o produto de cada movimento (para os gráficos).
+  Future<List<MovimentoDoProduto>> movimentosDesde(DateTime desde) async {
+    final consulta = select(movimentos).join([
+      innerJoin(unidades, unidades.id.equalsExp(movimentos.unidadeId)),
+      innerJoin(produtos, produtos.id.equalsExp(unidades.produtoId)),
+    ])
+      ..where(movimentos.quando.isBiggerOrEqualValue(desde))
+      ..orderBy([OrderingTerm.asc(movimentos.quando)]);
+    return consulta
+        .map((linha) => MovimentoDoProduto(
+              acao: linha.readTable(movimentos).acao,
+              quando: linha.readTable(movimentos).quando,
+              produto: linha.readTable(produtos),
+            ))
+        .get();
   }
 
   /// Todos os produtos com quantas unidades há em casa; a lista se atualiza sozinha.
