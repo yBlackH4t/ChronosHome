@@ -90,6 +90,25 @@ void main() {
     });
   });
 
+  test('vencendo: até 3 dias à frente ou já vencido, o mais urgente primeiro', () {
+    ItemDoEstoque comValidade(String nome, int dias) => ItemDoEstoque(
+          produto: Produto(id: nome, nome: nome, estoqueMinimo: 0, criadoEm: DateTime(2026, 1, 1)),
+          fechados: 1,
+          abertos: 0,
+          venceEm: DateTime(2026, 10, 11).add(Duration(days: dias)),
+        );
+    final resumo = Resumo([
+      comValidade('Longe', 10),
+      comValidade('Em 3 dias', 3),
+      comValidade('Hoje', 0),
+      comValidade('Venceu', -2),
+      item('Sem validade', fechados: 1),
+    ], agora: hoje);
+
+    expect({for (final v in resumo.vencendo) v.item.produto.nome: v.diasRestantes},
+        {'Venceu': -2, 'Hoje': 0, 'Em 3 dias': 3});
+  });
+
   test('acabando: só sobrou o aberto e ainda não está na lista de compras', () {
     final resumo = Resumo([
       item('Maionese', abertos: 1, abertoDesde: hoje),

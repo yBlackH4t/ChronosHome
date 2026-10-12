@@ -169,6 +169,19 @@ produto ganhou os ajustes **Estoque mínimo** e **Dura depois de aberto** (`ajus
 alimentam a lista e os avisos. `observarEstoque` agora traz `abertoDesde`. 43 testes. **Testado
 pelo dono no A10s: funcionando.**
 
+**Passo 7 (2026-10-11):** **validade opcional** na entrada: em Compras, tocar no item da lista
+abre o calendário (vale para as unidades daquela compra, e as próximas herdam); em Produto novo há
+o campo "Validade (opcional)". Calendário e textos do Flutter em português (`flutter_localizations`).
+A aba **Agora** ganhou **Vencendo** (até 3 dias à frente ou já vencido). **Avisos no celular**
+com `flutter_local_notifications` 22.3.1, `timezone` 0.11.1 e `flutter_timezone` 5.1.0: as contas
+ficam em `lib/dados/avisos.dart` (véspera e dia da validade; último dia do prazo depois de aberto
+e o dia seguinte; sempre às 9h; no máximo 40, os mais próximos) e o agendamento em
+`lib/servicos/avisos_no_celular.dart`, refeito a cada mudança do estoque. Agendamento **inexato**
+(sem pedir permissão de alarme exato): pode atrasar minutos, mas sai no dia certo. Android:
+desugaring ligado (`desugar_jdk_libs` 2.1.4), permissões `POST_NOTIFICATIONS` e
+`RECEIVE_BOOT_COMPLETED` e os recebedores do plugin no manifesto. 50 testes. **Testado pelo dono
+no A10s: sem erros.**
+
 Cada passo: `flutter analyze`, `flutter test`, build e teste no A10s, depois commit e push numa
 branch.
 

@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 
+import '../componentes/escolher_validade.dart';
 import '../dados/banco.dart';
+import '../dados/datas.dart';
 import '../servicos/open_food_facts.dart';
 
 /// O que a tela devolve depois de salvar.
 class ProdutoCadastrado {
-  const ProdutoCadastrado(this.produto, this.unidades);
+  const ProdutoCadastrado(this.produto, this.unidades, {this.venceEm});
 
   final Produto produto;
   final List<String> unidades;
+  final DateTime? venceEm;
 }
 
 /// Código que o app ainda não conhece: busca no Open Food Facts, a pessoa confere e salva.
@@ -47,6 +50,7 @@ class _TelaProdutoNovoState extends State<TelaProdutoNovo> {
   String? _erroDaBusca;
   String? _foto;
   int _quantidade = 1;
+  DateTime? _venceEm;
   bool _salvando = false;
 
   @override
@@ -107,10 +111,11 @@ class _TelaProdutoNovoState extends State<TelaProdutoNovo> {
       produtoId,
       quantidade: _quantidade,
       localId: widget.localId,
+      venceEm: _venceEm,
     );
     final produto = (await widget.banco.produtoPorCodigo(widget.codigo))!;
     if (!mounted) return;
-    Navigator.of(context).pop(ProdutoCadastrado(produto, unidades));
+    Navigator.of(context).pop(ProdutoCadastrado(produto, unidades, venceEm: _venceEm));
   }
 
   @override
@@ -181,7 +186,25 @@ class _TelaProdutoNovoState extends State<TelaProdutoNovo> {
               keyboardType: TextInputType.number,
               validator: _numeroOpcional,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.event_rounded),
+              title: Text(_venceEm == null ? 'Validade (opcional)' : 'Validade: ${diaEMes(_venceEm!)}'),
+              subtitle: const Text('A data impressa na embalagem. Usada nos avisos.'),
+              trailing: _venceEm == null
+                  ? null
+                  : IconButton(
+                      tooltip: 'Tirar a validade',
+                      icon: const Icon(Icons.close_rounded),
+                      onPressed: () => setState(() => _venceEm = null),
+                    ),
+              onTap: () async {
+                final data = await escolherValidade(context, atual: _venceEm);
+                if (data != null) setState(() => _venceEm = data);
+              },
+            ),
+            const SizedBox(height: 4),
             Row(
               children: [
                 Expanded(

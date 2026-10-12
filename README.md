@@ -27,8 +27,8 @@ Feito em **Flutter** (Android primeiro). Produto separado do
 | 4 | Compras: bipar → entrada; produto novo pelo Open Food Facts | ✅ |
 | 5 | Cozinha: bipar → Abrir ou Acabou | ✅ |
 | 6 | Início: abertos há N dias, acabando, lista de compras | ✅ |
-| 7 | Avisos e validade | ⏳ |
-| 8 | Gráficos | |
+| 7 | Avisos e validade | ✅ |
+| 8 | Gráficos | ⏳ |
 | 9 | Assistente (Groq) | |
 | 10 | Digital, backup e restauração | |
 | 11 | Versão 1.0 nas GitHub Releases (instalação pelo Obtainium) | |

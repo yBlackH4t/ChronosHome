@@ -2,21 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../componentes/acoes_do_produto.dart';
+import '../dados/avisos.dart';
 import '../dados/banco.dart';
+import '../dados/datas.dart';
 import '../dados/resumo.dart';
+import '../servicos/avisos_no_celular.dart';
 import '../servicos/open_food_facts.dart';
 import 'compras.dart';
 import 'cozinha.dart';
 
 /// Tela inicial, em três abas:
-/// - Agora: o que está aberto (e há quantos dias) e o que está acabando;
+/// - Agora: o que está vencendo, o que está aberto (e há quantos dias) e o que está acabando;
 /// - Comprar: a lista de compras pelo estoque mínimo;
 /// - Estoque: tudo o que tem em casa.
 class TelaInicial extends StatelessWidget {
-  const TelaInicial({super.key, required this.banco, required this.openFoodFacts});
+  const TelaInicial({super.key, required this.banco, required this.openFoodFacts, this.avisos});
 
   final Future<Banco> banco;
   final OpenFoodFacts openFoodFacts;
+  final AvisosNoCelular? avisos;
 
   @override
   Widget build(BuildContext context) {
@@ -39,22 +43,36 @@ class TelaInicial extends StatelessWidget {
             body: const Center(child: CircularProgressIndicator()),
           );
         }
-        return _Abas(banco: banco, openFoodFacts: openFoodFacts);
+        return _Abas(banco: banco, openFoodFacts: openFoodFacts, avisos: avisos);
       },
     );
   }
 }
 
-class _Abas extends StatelessWidget {
-  const _Abas({required this.banco, required this.openFoodFacts});
+class _Abas extends StatefulWidget {
+  const _Abas({required this.banco, required this.openFoodFacts, this.avisos});
 
   final Banco banco;
   final OpenFoodFacts openFoodFacts;
+  final AvisosNoCelular? avisos;
+
+  @override
+  State<_Abas> createState() => _AbasState();
+}
+
+class _AbasState extends State<_Abas> {
+  /// Criada uma vez só: refazer a consulta a cada redesenho pesa no A10s.
+  /// A cada mudança no estoque, os avisos do celular são reagendados.
+  late final Stream<List<ItemDoEstoque>> _estoque = widget.banco.observarEstoque().map((estoque) {
+    widget.avisos?.agendar(planejarAvisos(estoque, agora: DateTime.now()));
+    return estoque;
+  });
 
   @override
   Widget build(BuildContext context) {
+    final banco = widget.banco;
     return StreamBuilder<List<ItemDoEstoque>>(
-      stream: banco.observarEstoque(),
+      stream: _estoque,
       builder: (context, retrato) {
         final estoque = retrato.data;
         final resumo = estoque == null ? null : Resumo(estoque, agora: DateTime.now());
@@ -89,7 +107,7 @@ class _Abas extends StatelessWidget {
                       _AbaEstoque(banco: banco, estoque: resumo.estoque),
                     ],
                   ),
-            bottomNavigationBar: _BotoesDeBaixo(banco: banco, openFoodFacts: openFoodFacts),
+            bottomNavigationBar: _BotoesDeBaixo(banco: banco, openFoodFacts: widget.openFoodFacts),
           ),
         );
       },
@@ -152,14 +170,28 @@ class _AbaAgora extends StatelessWidget {
         texto: 'O estoque está vazio.\nToque em Compras e bipe o que chegou do mercado.',
       );
     }
-    if (resumo.abertos.isEmpty && resumo.acabando.isEmpty) {
+    if (resumo.vencendo.isEmpty && resumo.abertos.isEmpty && resumo.acabando.isEmpty) {
       return const _Mensagem(
         icone: Icons.check_circle_rounded,
-        texto: 'Nada aberto nem acabando.\nQuando abrir algo, bipe na Cozinha.',
+        texto: 'Nada vencendo, aberto ou acabando.\nQuando abrir algo, bipe na Cozinha.',
       );
     }
+    final cores = Theme.of(context).colorScheme;
     return ListView(
       children: [
+        if (resumo.vencendo.isNotEmpty) ...[
+          const _Titulo('Vencendo', detalhe: 'próximos  dias'),
+          for (final v in resumo.vencendo)
+            ListTile(
+              leading: Icon(
+                v.diasRestantes < 0 ? Icons.warning_rounded : Icons.event_rounded,
+                color: v.diasRestantes <= 0 ? cores.error : cores.tertiary,
+              ),
+              title: Text(v.item.produto.nome),
+              subtitle: Text('${textoDaValidade(v.diasRestantes)} · ${diaEMes(v.item.venceEm!)}'),
+              onTap: () => mostrarAcoesDoProduto(context, banco, v.item.produto),
+            ),
+        ],
         if (resumo.abertos.isNotEmpty) ...[
           const _Titulo('Abertos'),
           for (final a in resumo.abertos) _LinhaAberto(banco: banco, aberto: a),

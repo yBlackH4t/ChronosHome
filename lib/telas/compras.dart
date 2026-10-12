@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../componentes/erro_da_camera.dart';
+import '../componentes/escolher_validade.dart';
 import '../dados/banco.dart';
+import '../dados/datas.dart';
 import '../servicos/open_food_facts.dart';
 import 'produto_novo.dart';
 
@@ -84,7 +86,14 @@ class _TelaComprasState extends State<TelaCompras> {
   }
 
   Future<void> _darEntrada(Produto produto, int quantidade) async {
-    final ids = await widget.banco.darEntrada(produto.id, quantidade: quantidade, localId: _localId);
+    // Mais uma unidade do mesmo produto nesta compra herda a validade já escolhida.
+    final venceEm = _nestaCompra.where((i) => i.produto.id == produto.id).firstOrNull?.venceEm;
+    final ids = await widget.banco.darEntrada(
+      produto.id,
+      quantidade: quantidade,
+      localId: _localId,
+      venceEm: venceEm,
+    );
     await HapticFeedback.mediumImpact();
     if (!mounted) return;
     setState(() {
@@ -115,9 +124,16 @@ class _TelaComprasState extends State<TelaCompras> {
     ));
     if (resultado != null && mounted) {
       await HapticFeedback.mediumImpact();
-      setState(() => _nestaCompra.insert(0, _ItemDaCompra(resultado.produto, [...resultado.unidades])));
+      setState(() => _nestaCompra.insert(0, _ItemDaCompra(resultado.produto, [...resultado.unidades], venceEm: resultado.venceEm)));
     }
     if (mounted) await _camera.start();
+  }
+
+  Future<void> _escolherValidade(_ItemDaCompra item) async {
+    final data = await escolherValidade(context, atual: item.venceEm);
+    if (data == null) return;
+    await widget.banco.definirValidade(item.unidades, data);
+    if (mounted) setState(() => item.venceEm = data);
   }
 
   Future<void> _desfazerUma(_ItemDaCompra item) async {
@@ -189,7 +205,12 @@ class _TelaComprasState extends State<TelaCompras> {
                       final item = _nestaCompra[i];
                       return ListTile(
                         title: Text(item.produto.nome),
-                        subtitle: item.produto.marca == null ? null : Text(item.produto.marca!),
+                        subtitle: Text(
+                          item.venceEm == null
+                              ? 'Toque para pôr a validade'
+                              : 'Validade: ${diaEMes(item.venceEm!)}',
+                        ),
+                        onTap: () => _escolherValidade(item),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -229,7 +250,9 @@ class _TelaComprasState extends State<TelaCompras> {
 }
 
 class _ItemDaCompra {
-  _ItemDaCompra(this.produto, this.unidades);
+  _ItemDaCompra(this.produto, this.unidades, {this.venceEm});
+
+  DateTime? venceEm;
 
   final Produto produto;
   final List<String> unidades;

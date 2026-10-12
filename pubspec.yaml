@@ -12,6 +12,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  # Textos do Flutter (calendário, botões) em português.
+  flutter_localizations:
+    sdk: flutter
   # Câmera lendo códigos de barras (EAN-13, EAN-8, UPC, QR).
   mobile_scanner: 7.4.2
   # Banco SQLite com tipos e migrações.
@@ -25,6 +28,10 @@ dependencies:
   uuid: 4.6.0
   # Consulta ao Open Food Facts (nome, marca e foto pelo código de barras).
   http: 1.6.0
+  # Avisos no celular (vence amanhã, prazo depois de aberto), agendados no fuso de quem usa.
+  flutter_local_notifications: 22.3.1
+  timezone: 0.11.1
+  flutter_timezone: 5.1.0
 
 dev_dependencies:
   flutter_test:
